@@ -23,23 +23,43 @@ interface InsertarPersonaResponse {
 }
 
 /**
- * Interface para los datos de persona desde persona/info
+ * Interface para los datos completos de persona desde persona/info
+ * Actualizada según sp_consultaInformacionPersona
  */
 interface PersonaInfo {
+  // Campos de persona
   idPersona: number;
   nombre: string;
   ruc?: string;
-  dv?: number;
+  dv?: string;
   direccion?: string;
   fechaNacimiento?: string;
   telefono?: string;
   celular?: string;
   email?: string;
+  
+  // Campos de ubicación
+  idCiudad: number;
+  nombreCiudad: string;
+  idDistrito: number;
+  nombreDistrito: string;      // Nombre del distrito
+  idDepartamento: number;
+  nombreDepartamento: string;  // Nombre del departamento
+  
+  // Campos de personaFis
   apellido?: string;
+  
+  // Campos de personaJur
   nombreFantasia?: string | null;
+  
+  // Campos de proveedor
   responsable?: string | null;
   timbrado?: string | null;
+  
+  // Campos de cliente
   codigo?: number;
+  idGrupoCliente?: number;
+  nombreGrupoCliente?: string;
 }
 
 /**
@@ -114,6 +134,28 @@ export const personaService = {
     } catch (error: any) {
       console.error('Error al obtener información de la persona:', error);
       throw new Error('Error al obtener información de la persona');
+    }
+  },
+
+  /**
+   * Consulta una persona por su RUC
+   * @param ruc - RUC de la persona a buscar
+   * @returns Información completa de la persona
+   */
+  consultarPersonaPorRuc: async (ruc: string): Promise<PersonaInfo[]> => {
+    try {
+      const response = await axios.get<PersonaInfoResponse>(
+        `${API_BASE_URL}/persona/consultaRuc`,
+        {
+          params: {
+            ruc: ruc
+          }
+        }
+      );
+      return response.data.result;
+    } catch (error: any) {
+      console.error('Error al consultar persona por RUC:', error);
+      throw new Error('Error al consultar persona por RUC');
     }
   }
 };

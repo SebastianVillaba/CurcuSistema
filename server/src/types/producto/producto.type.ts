@@ -6,6 +6,7 @@ export interface InsertarProductoRequest {
   precio?: number;
   costo?: number;
   idUsuarioAlta?: number;           
+  idTipoProducto?: number;
 }
 
 export interface InsertarProductoResponse {

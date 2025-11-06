@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { personaService } from '../../services/persona.service';
+import { productoService } from '../../services/producto.service';
 import {
   Box,
   Paper,
@@ -24,22 +24,24 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
-import type { Persona } from '../../types/persona.types';
-import PersonaForm from '../../components/Persona/PersonaForm';
+import type { Producto } from '../../types/producto.types';
+import ProductoForm from '../../components/Producto/ProductoForm';
 
-export default function PersonasABM(): JSX.Element {
+export default function ProductosABM(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchBy, setSearchBy] = useState<1 | 2 | 3>(1);
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [selectedProducto, setSelectedProducto] = useState<Producto | null>(null);
   const [isNewMode, setIsNewMode] = useState<boolean>(false);
-  const [formData, setFormData] = useState<Persona>({
+  const [formData, setFormData] = useState<Producto>({
     nombre: '',
+    presentacion: '',
+    codigo: '',
+    codigoBarra: '',
+    precio: 0,
+    costo: 0,
+    idTipoProducto: 0,
     idUsuarioAlta: 1, // TODO: Obtener del usuario logueado
-    tipoPersonaJur: false,
-    tipoProveedor: false,
-    tipoPersonaFis: false,
-    tipoPersonaCli: false,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -54,62 +56,46 @@ export default function PersonasABM(): JSX.Element {
     setError('');
 
     try {
-      const results = await personaService.buscarPersonas(searchTerm, searchBy);
+      const results = await productoService.buscarProductos(searchTerm, searchBy);
       console.log(results);
-      setPersonas(results.result);
+      setProductos(results.result);
     } catch (err: any) {
-      console.error('Error al buscar personas:', err);
-      setError(err.message || 'Error al buscar personas');
+      console.error('Error al buscar productos:', err);
+      setError(err.message || 'Error al buscar productos');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectPersona = async (persona: Persona) => {
+  const handleSelectProducto = async (producto: Producto) => {
     setLoading(true);
     setError('');
 
     try {
-      // Obtener información detallada de la persona seleccionada
-      const personaInfo = await personaService.obtenerInfoPersona(persona.idPersona!);
+      // Obtener información detallada del producto seleccionado
+      const productoInfo = await productoService.obtenerInfoProducto(producto.idProducto!);
 
       // Usar el primer resultado (debería haber solo uno)
-      const infoCompleta = personaInfo[0];
+      const infoCompleta = productoInfo[0];
 
       // Mapear la información completa al formato del formulario
-      const personaMapeada: Persona = {
-        idPersona: infoCompleta.idPersona,
+      const productoMapeado: Producto = {
+        idProducto: infoCompleta.idProducto,
         nombre: infoCompleta.nombre,
-        ruc: infoCompleta.ruc,
-        dv: infoCompleta.dv?.toString(),
-        direccion: infoCompleta.direccion,
-        // Campos de ubicación - ahora vienen del SP actualizado
-        idDepartamento: infoCompleta.idDepartamento,
-        idDistrito: infoCompleta.idDistrito,
-        idCiudad: infoCompleta.idCiudad?.toString(),
-        pais: 'PARAGUAY', // Asumimos Paraguay por defecto
-        telefono: infoCompleta.telefono,
-        celular: infoCompleta.celular,
-        email: infoCompleta.email,
-        fechaNacimiento: infoCompleta.fechaNacimiento ? new Date(infoCompleta.fechaNacimiento).toISOString().split('T')[0] : '',
-        apellido: infoCompleta.apellido,
-        nombreFantasia: infoCompleta.nombreFantasia || '',
-        responsableProveedor: infoCompleta.responsable || '',
-        timbrado: infoCompleta.timbrado || '',
+        presentacion: infoCompleta.presentacion,
         codigo: infoCompleta.codigo,
-        idGrupoCliente: infoCompleta.idGrupoCliente,
-        tipoPersonaJur: !!infoCompleta.nombreFantasia, // Si tiene nombreFantasia es Jurídica
-        tipoProveedor: !!infoCompleta.responsable, // Si tiene responsable es Proveedor
-        tipoPersonaFis: !!infoCompleta.apellido, // Si tiene apellido es Física
-        tipoPersonaCli: !!infoCompleta.codigo, // Si tiene código es Cliente
-        idUsuarioAlta: 1, // TODO: Obtener del usuario logueado
+        codigoBarra: infoCompleta.codigoBarra,
+        precio: infoCompleta.precio,
+        costo: infoCompleta.costo,
+        idTipoProducto: infoCompleta.idTipoProducto,
       };
-      setSelectedPersona(personaMapeada);
-      setFormData(personaMapeada);
+
+      setSelectedProducto(productoMapeado);
+      setFormData(productoMapeado);
       setIsNewMode(false);
     } catch (err: any) {
-      console.error('Error al obtener información de la persona:', err);
-      setError(err.message || 'Error al obtener información de la persona');
+      console.error('Error al obtener información del producto:', err);
+      setError(err.message || 'Error al obtener información del producto');
     } finally {
       setLoading(false);
     }
@@ -117,27 +103,17 @@ export default function PersonasABM(): JSX.Element {
 
   const handleNew = () => {
     setIsNewMode(true);
-    setSelectedPersona(null);
+    setSelectedProducto(null);
     setError('');
     setFormData({
       nombre: '',
-      ruc: '',
-      dv: '',
-      direccion: '',
-      telefono: '',
-      celular: '',
-      email: '',
-      fechaNacimiento: '',
+      presentacion: '',
+      codigo: '',
+      codigoBarra: '',
+      precio: 0,
+      costo: 0,
+      idTipoProducto: 0,
       idUsuarioAlta: 1, // TODO: Obtener del usuario logueado
-      nombreFantasia: '',
-      apellido: '',
-      codigo: 0,
-      tipoPersonaJur: false,
-      tipoProveedor: false,
-      responsableProveedor: '',
-      timbrado: '',
-      tipoPersonaFis: false,
-      tipoPersonaCli: false,
     });
   };
 
@@ -152,63 +128,50 @@ export default function PersonasABM(): JSX.Element {
       return;
     }
 
-    // 2. Validar que al menos un tipo de persona esté seleccionado
-    if (!formData.tipoPersonaFis && !formData.tipoPersonaJur) {
-      setError('Debe seleccionar al menos un tipo de persona (Física o Jurídica)');
+    // 3. Validar código obligatorio
+    if (!formData.codigo || formData.codigo.trim() === '') {
+      setError('El código es obligatorio');
       return;
     }
 
-    // 3. Validar campos específicos según tipo de persona
-    if (formData.tipoPersonaFis && (!formData.apellido || formData.apellido.trim() === '')) {
-      setError('El apellido es obligatorio para Persona Física');
+    // 4. Validar precio mayor a 0
+    if (formData.precio <= 0) {
+      setError('El precio debe ser mayor a 0');
       return;
     }
 
-    if (formData.tipoPersonaJur && (!formData.nombreFantasia || formData.nombreFantasia.trim() === '')) {
-      setError('El nombre de fantasía es obligatorio para Persona Jurídica');
+    // 6. Validar tipo de producto seleccionado
+    if (!formData.idTipoProducto || formData.idTipoProducto <= 0) {
+      setError('Debe seleccionar un tipo de producto');
       return;
-    }
-
-    // 4. Convertir fecha si existe (de YYYY-MM-DD a DD/MM/YYYY para el API)
-    let fechaFormateada = '';
-    if (formData.fechaNacimiento) {
-      const fecha = new Date(formData.fechaNacimiento);
-      const dia = String(fecha.getDate()).padStart(2, '0');
-      const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-      const anio = fecha.getFullYear();
-      fechaFormateada = `${dia}/${mes}/${anio}`;
     }
 
     try {
       setLoading(true);
-      
+
       if (isNewMode) {
-        // Crear nueva persona
+        // Crear nuevo producto
         const dataToSend = {
           ...formData,
-          fechaNacimiento: fechaFormateada,
-          codigo: formData.codigo || 0,
+          idUsuarioAlta: 1, // TODO: Obtener del usuario logueado
         };
+        const response = await productoService.insertarProducto(dataToSend);
 
-        console.log('Enviando datos al API:', dataToSend);
-        
-        const response = await personaService.insertarPersona(dataToSend);
-        
         alert(`✓ ${response.message}`);
-        
+
         // Limpiar formulario y volver al estado inicial
         handleCancel();
-        
-        // Opcional: Recargar la lista de personas
+
+        // Opcional: Recargar la lista de productos
         // handleSearch();
       } else {
-        // Actualizar persona existente
+        // Actualizar producto existente
         // TODO: Implementar endpoint de actualización en el backend
         alert('Funcionalidad de actualización pendiente de implementar');
       }
     } catch (err: any) {
-      console.error('Error al guardar persona:', err);
-      setError(err.message || 'Error al guardar la persona');
+      console.error('Error al guardar producto:', err);
+      setError(err.message || 'Error al guardar el producto');
     } finally {
       setLoading(false);
     }
@@ -216,15 +179,17 @@ export default function PersonasABM(): JSX.Element {
 
   const handleCancel = () => {
     setIsNewMode(false);
-    setSelectedPersona(null);
+    setSelectedProducto(null);
     setError('');
     setFormData({
       nombre: '',
+      presentacion: '',
+      codigo: '',
+      codigoBarra: '',
+      precio: 0,
+      costo: 0,
+      idTipoProducto: 0,
       idUsuarioAlta: 1,
-      tipoPersonaJur: false,
-      tipoProveedor: false,
-      tipoPersonaFis: false,
-      tipoPersonaCli: false,
     });
   };
 
@@ -235,7 +200,7 @@ export default function PersonasABM(): JSX.Element {
         <Typography variant="h6" gutterBottom>
           Búsqueda
         </Typography>
-        
+
         <FormControl component="fieldset" sx={{ mb: 2 }}>
           <FormLabel component="legend">Ordenar</FormLabel>
           <RadioGroup
@@ -245,7 +210,7 @@ export default function PersonasABM(): JSX.Element {
           >
             <FormControlLabel value="1" control={<Radio size="small" />} label="Nombre" />
             <FormControlLabel value="2" control={<Radio size="small" />} label="Código" />
-            <FormControlLabel value="3" control={<Radio size="small" />} label="RUC" />
+            <FormControlLabel value="3" control={<Radio size="small" />} label="Código Barra" />
           </RadioGroup>
         </FormControl>
 
@@ -268,15 +233,15 @@ export default function PersonasABM(): JSX.Element {
         {/* Lista de resultados */}
         <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
           <List dense>
-            {personas.map((persona) => (
-              <ListItem key={persona.idPersona} disablePadding>
+            {productos.map((producto) => (
+              <ListItem key={producto.idProducto} disablePadding>
                 <ListItemButton
-                  selected={selectedPersona?.idPersona === persona.idPersona}
-                  onClick={() => handleSelectPersona(persona)}
+                  selected={selectedProducto?.idProducto === producto.idProducto}
+                  onClick={() => handleSelectProducto(producto)}
                 >
                   <ListItemText
-                    primary={persona.nombre}
-                    secondary={`RUC: ${persona.ruc || 'N/A'}`}
+                    primary={producto.nombre}
+                    secondary={`Código: ${producto.codigo}`}
                   />
                 </ListItemButton>
               </ListItem>
@@ -289,7 +254,7 @@ export default function PersonasABM(): JSX.Element {
       <Paper sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5">
-            {isNewMode ? 'Nueva Persona' : selectedPersona ? 'Editar Persona' : 'Persona-Entidad'}
+            {isNewMode ? 'Nuevo Producto' : selectedProducto ? 'Editar Producto' : 'Producto'}
           </Typography>
         </Box>
 
@@ -307,12 +272,12 @@ export default function PersonasABM(): JSX.Element {
           </Box>
         )}
 
-        {(isNewMode || selectedPersona) ? (
-          <PersonaForm formData={formData} setFormData={setFormData} />
+        {(isNewMode || selectedProducto) ? (
+          <ProductoForm formData={formData} setFormData={setFormData} />
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60%' }}>
             <Typography variant="h6" color="text.secondary">
-              Seleccione una persona o haga clic en "Nuevo" para comenzar
+              Seleccione un producto o haga clic en "Nuevo" para comenzar
             </Typography>
           </Box>
         )}
@@ -325,8 +290,8 @@ export default function PersonasABM(): JSX.Element {
           >
             Nuevo
           </Button>
-          
-          {(isNewMode || selectedPersona) && (
+
+          {(isNewMode || selectedProducto) && (
             <>
               <Button
                 variant="contained"

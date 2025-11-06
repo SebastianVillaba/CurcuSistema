@@ -4,15 +4,20 @@ export interface Persona {
   ruc?: string;
   dv?: string;
   direccion?: string;
-  ciudad?: string;
+  idDepartamento?: number;           // ID del departamento seleccionado
+  idDistrito?: number;               // ID del distrito seleccionado
+  idCiudad?: string;                 // varchar(30) según el SP
+  pais?: string;                     
   telefono?: string;
   celular?: string;
   email?: string;                    
   fechaNacimiento?: string;          
   idUsuarioAlta: number;             
+  idTipoDocumento?: number;          
   nombreFantasia?: string;
   apellido?: string;
   codigo?: number;
+  idGrupoCliente?: number;           
   tipoPersonaJur: boolean;           
   tipoProveedor: boolean;            
   responsableProveedor?: string;    

@@ -1,8 +1,12 @@
 import express from 'express';
-import { insertarProducto } from '../controllers/producto.controller';
+import { insertarProducto, buscarProductos, obtenerInfoProducto, obtenerTiposProducto, consultarPrecioProducto } from '../controllers/producto.controller';
 
 const router = express.Router();
 
 router.post('/', insertarProducto);
+router.get('/consulta', buscarProductos);
+router.get('/info', obtenerInfoProducto);
+router.get('/tipoProducto', obtenerTiposProducto);
+router.get('/precio', consultarPrecioProducto);
 
 export default router;

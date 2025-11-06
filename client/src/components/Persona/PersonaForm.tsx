@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   TextField,
   MenuItem,
@@ -7,11 +8,13 @@ import {
   Typography,
   Box,
   Stack,
-  Container,
   Paper,
+  Autocomplete,
 } from '@mui/material';
 import type { Persona } from '../../types/persona.types';
-import { TipoPersonaForm } from './tipoPersonaForm';
+import type { Departamento, Distrito, Ciudad } from '../../types/ubicacion.types';
+import { TipoPersonaForm } from './TipoPersonaForm';
+import { ubicacionService } from '../../services/ubicacion.service';
 
 interface PersonaFormProps {
   formData: Persona;
@@ -23,71 +26,124 @@ const paises = [
   "PARAGUAY",
   "ARGENTINA",
   "BRASIL",
-  "CHILE"
-]
-// Datos de ejemplo para los combobox
-const departamentos = [
-  'ALTO PARAGUAY',
-  'BOQUERÓN',
-  'PRESIDENTE HAYES',
-  'CONCEPCIÓN',
-  'SAN PEDRO',
-  'CORDILLERA',
-  'GUAIRÁ',
-  'CAAGUAZÚ',
-  'CAAZAPÁ',
-  'ITAPÚA',
-  'MISIONES',
-  'PARAGUARÍ',
-  'ALTO PARANÁ',
-  'CENTRAL',
-  'ÑEEMBUCÚ',
-  'AMAMBAY',
-  'CANINDEYÚ',
-  'ASUNCIÓN',
-];
-
-const distritos = [
-  '1RO.DE MARZO',
-  'AREGUÁ',
-  'CAPIATÁ',
-  'FERNANDO DE LA MORA',
-  'GUARAMBARÉ',
-  'ITÁ',
-  'ITAUGUÁ',
-  'LAMBARÉ',
-  'LIMPIO',
-  'LUQUE',
-  'MARIANO ROQUE ALONSO',
-  'NUEVA ITALIA',
-  'ÑEMBY',
-  'SAN ANTONIO',
-  'SAN LORENZO',
-  'VILLA ELISA',
-  'VILLETA',
-  'YPACARAÍ',
-];
-
-const ciudades = [
-  'ASUNCIÓN',
-  'FERNANDO DE LA MORA',
-  'LAMBARÉ',
-  'LUQUE',
-  'SAN LORENZO',
-  'CAPIATÁ',
-  'LIMPIO',
-  'OBRAJE PINDOTY',
-  'ENCARNACION'
+  "CHILE",
+  "URUGUAY",
+  "BOLIVIA"
 ];
 
 const tiposDocumento = [
-  'Cédula paraguaya',
-  'RUC',
-  'Pasaporte',
-  'Otro',
+  { id: 1, nombre: 'Cédula paraguaya' },
+  { id: 2, nombre: 'RUC' },
+  { id: 3, nombre: 'Pasaporte' },
+  { id: 4, nombre: 'Otro' },
 ];
 
 export default function PersonaForm({ formData, setFormData }: PersonaFormProps): JSX.Element {
+  // Estados para los datos de ubicación
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
+  const [distritos, setDistritos] = useState<Distrito[]>([]);
+  const [ciudades, setCiudades] = useState<Ciudad[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [valoresPorDefectoCargados, setValoresPorDefectoCargados] = useState(false);
+
+  // Cargar departamentos al montar el componente
+  useEffect(() => {
+    const cargarDepartamentos = async () => {
+      try {
+        setLoading(true);
+        const data = await ubicacionService.obtenerDepartamentos();
+        setDepartamentos(data);
+        
+        // Establecer valores por defecto solo si es un nuevo registro
+        if (!formData.idPersona && !valoresPorDefectoCargados) {
+          // Buscar Itapúa en los departamentos
+          const itapua = data.find(d => d.nombre.toUpperCase().includes('ITAP'));
+          if (itapua) {
+            setFormData(prev => ({
+              ...prev,
+              pais: 'PARAGUAY',
+              idDepartamento: itapua.idDepartamento
+            }));
+          }
+          setValoresPorDefectoCargados(true);
+        }
+      } catch (error) {
+        console.error('Error al cargar departamentos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    cargarDepartamentos();
+  }, []);
+
+  // Cargar distritos cuando cambia el departamento
+  useEffect(() => {
+    const cargarDistritos = async () => {
+      if (formData.idDepartamento) {
+        try {
+          setLoading(true);
+          const data = await ubicacionService.obtenerDistritosPorDepartamento(formData.idDepartamento);
+          setDistritos(data);
+          
+          // Establecer Encarnación por defecto solo si es un nuevo registro y no tiene distrito
+          if (!formData.idPersona && !formData.idDistrito && valoresPorDefectoCargados) {
+            const encarnacion = data.find(d => d.nombre.toUpperCase().includes('ENCARNA'));
+            if (encarnacion) {
+              setFormData(prev => ({
+                ...prev,
+                idDistrito: encarnacion.idDistrito
+              }));
+            }
+          } else if (formData.idDistrito) {
+            // Limpiar distrito y ciudad si cambia el departamento y ya tenía distrito
+            setFormData(prev => ({ ...prev, idDistrito: undefined, idCiudad: undefined }));
+          }
+        } catch (error) {
+          console.error('Error al cargar distritos:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setDistritos([]);
+        setCiudades([]);
+      }
+    };
+    cargarDistritos();
+  }, [formData.idDepartamento]);
+
+  // Cargar ciudades cuando cambia el distrito
+  useEffect(() => {
+    const cargarCiudades = async () => {
+      if (formData.idDistrito) {
+        try {
+          setLoading(true);
+          const data = await ubicacionService.obtenerCiudadesPorDistrito(formData.idDistrito);
+          setCiudades(data);
+          
+          // Establecer Encarnación por defecto solo si es un nuevo registro y no tiene ciudad
+          if (!formData.idPersona && !formData.idCiudad && valoresPorDefectoCargados) {
+            const encarnacion = data.find(c => c.nombreCiudad.toUpperCase().includes('ENCARNA'));
+            if (encarnacion) {
+              setFormData(prev => ({
+                ...prev,
+                idCiudad: encarnacion.idCiudad.toString()
+              }));
+            }
+          } else if (formData.idCiudad) {
+            // Limpiar ciudad si cambia el distrito y ya tenía ciudad
+            setFormData(prev => ({ ...prev, idCiudad: undefined }));
+          }
+        } catch (error) {
+          console.error('Error al cargar ciudades:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setCiudades([]);
+      }
+    };
+    cargarCiudades();
+  }, [formData.idDistrito]);
   const handleChange = (field: keyof Persona) => (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any
   ) => {
@@ -149,68 +205,113 @@ export default function PersonaForm({ formData, setFormData }: PersonaFormProps)
           />
         </Stack>
 
-        {/* Fila 4: Tipo de documento, Departamento */}
+        {/* Fila 3: País, Tipo de documento */}
         <Stack direction="row" spacing={2}>
           <FormControl fullWidth size="small">
-            <InputLabel>Tipo de documento</InputLabel>
+            <InputLabel>País</InputLabel>
             <Select
-              value={formData.tipoDocumento || ''}
-              onChange={handleChange('tipoDocumento')}
-              label="Tipo de documento"
+              value={formData.pais || ''}
+              onChange={handleChange('pais')}
+              label="País"
             >
-              {tiposDocumento.map((tipo) => (
-                <MenuItem key={tipo} value={tipo}>
-                  {tipo}
+              {paises.map((pais) => (
+                <MenuItem key={pais} value={pais}>
+                  {pais}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
           <FormControl fullWidth size="small">
-            <InputLabel>Departamento</InputLabel>
+            <InputLabel>Tipo de documento</InputLabel>
             <Select
-              // value={formData.departamento || ''}
-              // onChange={handleChange('departamento')}
-              label="Departamento"
+              value={formData.idTipoDocumento || ''}
+              onChange={handleChange('idTipoDocumento')}
+              label="Tipo de documento"
             >
-              {departamentos.map((depto) => (
-                <MenuItem key={depto} value={depto}>
-                  {depto}
+              {tiposDocumento.map((tipo) => (
+                <MenuItem key={tipo.id} value={tipo.id}>
+                  {tipo.nombre}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         </Stack>
 
+        {/* Fila 4: Departamento */}
+        <Stack direction="row" spacing={2}>
+          <Autocomplete
+            fullWidth
+            size="small"
+            options={departamentos}
+            getOptionLabel={(option) => option.nombre}
+            value={departamentos.find(d => d.idDepartamento === formData.idDepartamento) || null}
+            onChange={(_event, newValue) => {
+              setFormData(prev => ({
+                ...prev,
+                idDepartamento: newValue?.idDepartamento,
+                idDistrito: undefined,
+                idCiudad: undefined
+              }));
+            }}
+            disabled={loading}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Departamento"
+                placeholder="Buscar departamento..."
+              />
+            )}
+            noOptionsText="No hay departamentos disponibles"
+          />
+        </Stack>
+
         {/* Fila 5: Distrito, Ciudad */}
         <Stack direction="row" spacing={2}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Distrito</InputLabel>
-            <Select
-              //value={formData.distrito || ''}
-              //onChange={handleChange('distrito')}
-              label="Distrito"
-            >
-              {distritos.map((dist) => (
-                <MenuItem key={dist} value={dist}>
-                  {dist}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth size="small">
-            <InputLabel>Ciudad</InputLabel>
-            <Select
-              value={formData.ciudad || ''}
-              onChange={handleChange('ciudad')}
-              label="Ciudad"
-            >
-              {ciudades.map((city) => (
-                <MenuItem key={city} value={city}>
-                  {city}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            fullWidth
+            size="small"
+            options={distritos}
+            getOptionLabel={(option) => option.nombre}
+            value={distritos.find(d => d.idDistrito === formData.idDistrito) || null}
+            onChange={(_event, newValue) => {
+              setFormData(prev => ({
+                ...prev,
+                idDistrito: newValue?.idDistrito,
+                idCiudad: undefined
+              }));
+            }}
+            disabled={!formData.idDepartamento || loading || distritos.length === 0}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Distrito"
+                placeholder="Buscar distrito..."
+              />
+            )}
+            noOptionsText={!formData.idDepartamento ? "Primero seleccione un departamento" : "No hay distritos disponibles"}
+          />
+          <Autocomplete
+            fullWidth
+            size="small"
+            options={ciudades}
+            getOptionLabel={(option) => option.nombreCiudad}
+            value={ciudades.find(c => c.idCiudad.toString() === formData.idCiudad) || null}
+            onChange={(_event, newValue) => {
+              setFormData(prev => ({
+                ...prev,
+                idCiudad: newValue?.idCiudad?.toString()
+              }));
+            }}
+            disabled={!formData.idDistrito || loading || ciudades.length === 0}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Ciudad"
+                placeholder="Buscar ciudad..."
+              />
+            )}
+            noOptionsText={!formData.idDistrito ? "Primero seleccione un distrito" : "No hay ciudades disponibles"}
+          />
         </Stack>
 
         {/* Fila 6: Fecha Aniversario, Teléfonos */}

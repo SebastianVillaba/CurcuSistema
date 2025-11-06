@@ -1,5 +1,5 @@
 import express from 'express';
-import { buscarInfoPersona, buscarPersona, insertarPersona } from '../controllers/persona.controller';
+import { buscarInfoPersona, buscarPersona, consultarPersonaPorRuc, insertarPersona } from '../controllers/persona.controller';
 
 const router = express.Router();
 
@@ -8,5 +8,6 @@ const router = express.Router();
 router.post('/', insertarPersona);
 router.get('/consulta', buscarPersona);
 router.get('/info', buscarInfoPersona);
+router.get('/consultaRuc', consultarPersonaPorRuc);
 
 export default router;

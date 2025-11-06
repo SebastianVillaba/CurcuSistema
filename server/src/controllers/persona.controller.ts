@@ -32,15 +32,18 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       ruc,
       dv,
       direccion,
-      ciudad,
+      idCiudad,
+      pais,
       telefono,
       celular,
       email,
       fechaNacimiento,
       idUsuarioAlta,
+      idTipoDocumento,
       nombreFantasia,
       apellido,
       codigo,
+      idGrupoCliente,
       tipoPersonaJur,
       tipoProveedor,
       responsableProveedor,
@@ -94,15 +97,18 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       { name: 'ruc', type: sql.VarChar, value: ruc || '' },
       { name: 'dv', type: sql.VarChar, value: dv || '' },
       { name: 'direccion', type: sql.VarChar, value: direccion || '' },
-      { name: 'ciudad', type: sql.VarChar, value: ciudad || '' },
+      { name: 'idCiudad', type: sql.VarChar, value: idCiudad || '' },
+      { name: 'pais', type: sql.VarChar, value: pais || '' },
       { name: 'telefono', type: sql.VarChar, value: telefono || '' },
       { name: 'celular', type: sql.VarChar, value: celular || '' },
       { name: 'email', type: sql.VarChar, value: email || '' },
       { name: 'fechaNacimiento', type: sql.VarChar, value: fechaNacimiento || '' },
       { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta },
+      { name: 'idTipoDocumento', type: sql.Int, value: idTipoDocumento || 0 },
       { name: 'nombreFantasia', type: sql.VarChar, value: nombreFantasia || '' },
       { name: 'apellido', type: sql.VarChar, value: apellido || '' },
       { name: 'codigo', type: sql.Int, value: codigo || 0 },
+      { name: 'idGrupoCliente', type: sql.Int, value: idGrupoCliente || 0 },
       { name: 'tipoPersonaJur', type: sql.Bit, value: tipoPersonaJur ? 1 : 0 },
       { name: 'tipoProveedor', type: sql.Bit, value: tipoProveedor ? 1 : 0 },
       { name: 'responsableProveedor', type: sql.VarChar, value: responsableProveedor || '' },
@@ -253,6 +259,55 @@ export const buscarInfoPersona = async (req: Request, res: Response): Promise<vo
     res.status(500).json({
       success: false,
       message: 'Error al buscar persona',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+}
+
+/**
+ * Controller para consultar una persona por su RUC
+ * Utiliza el stored procedure sp_consultaPersonaRuc
+ * 
+ * @param req - Request con el parámetro ruc en query
+ * @param res - Response con la información de la persona
+ */
+export const consultarPersonaPorRuc = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ruc } = req.query;
+    
+    // Validar que el parámetro exista
+    if (!ruc) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro ruc es requerido'
+      });
+      return;
+    }
+
+    const result = await executeRequest({
+      query: 'sp_consultaPersonaRuc',
+      isStoredProcedure: true,
+      inputs: [
+        {
+          name: 'busqueda',
+          type: sql.VarChar,
+          value: ruc
+        }
+      ]
+    });
+
+    const rowsAffected = result.rowsAffected[0];
+
+    res.status(200).json({
+      success: true,
+      message: 'Consulta exitosa',
+      result: result.recordset,
+      rowsAffected: rowsAffected
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al consultar persona por RUC',
       error: error instanceof Error ? error.message : 'Error desconocido'
     });
   }

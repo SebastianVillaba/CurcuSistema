@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import { executeRequest, sql } from "../utils/dbHandler";
-import { InsertarProductoRequest, InsertarProductoResponse } from "../types/producto/producto.type";
+import { InsertarProductoRequest, InsertarProductoResponse, BuscarProductoRequest } from "../types/producto/producto.type";
 
 /**
  * Controller para insertar una nueva persona en el sistema.
- * 
+ *
  * @param req
  * @param res
- * 
+ *
  */
 export const insertarProducto = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -20,15 +20,16 @@ export const insertarProducto = async (req: Request, res: Response): Promise<voi
       codigoBarra,
       precio,
       costo,
-      idUsuarioAlta
+      idUsuarioAlta,
+      idTipoProducto
     } = req.body as InsertarProductoRequest;
 
     // PASO 2: Validar campos obligatorios
     // El nombre y el ID del usuario que da de alta son obligatorios
     if (!nombre || !idUsuarioAlta) {
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
-        message: "El nombre y usuario son obligatorios" 
+        message: "El nombre y usuario son obligatorios"
       });
       return;
     }
@@ -41,7 +42,8 @@ export const insertarProducto = async (req: Request, res: Response): Promise<voi
       { name: 'codigoBarra', type: sql.VarChar, value: codigoBarra || '' },
       { name: 'precio', type: sql.Decimal, value: precio || 0 },
       { name: 'costo', type: sql.Decimal, value: costo || 0 },
-      { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta }
+      { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta },
+      { name: 'idTipoProducto', type: sql.Int, value: idTipoProducto || 0 }
     ];
 
     // PASO 6: Ejecutar el stored procedure
@@ -59,8 +61,8 @@ export const insertarProducto = async (req: Request, res: Response): Promise<voi
 
     // PASO 7: Verificar el resultado y enviar respuesta exitosa
     const rowsAffected = result.rowsAffected[0];
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       success: true,
       message: "Producto insertado exitosamente",
       rowsAffected: rowsAffected
@@ -72,17 +74,138 @@ export const insertarProducto = async (req: Request, res: Response): Promise<voi
     // Verificar si es un error personalizado de validación del stored procedure
     if (validationErrorCodes.includes(error.number)) {
       // Devolver HTTP 400 Bad Request con el mensaje exacto del RAISERROR
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
         message: error.message || "Error de validación en los datos del producto."
       });
     } else {
       // Error genérico del servidor o de la base de datos
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error interno del servidor al insertar el producto.",
         error: error.message
       });
     }
+  }
+};
+
+/**
+ * Controller para buscar productos
+ */
+export const buscarProductos = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { tipoBusqueda, busqueda } = req.query as any;
+
+    const inputs = [
+      { name: 'tipoBusqueda', type: sql.Int, value: parseInt(tipoBusqueda) || 1 },
+      { name: 'busqueda', type: sql.VarChar, value: busqueda || '' }
+    ];
+
+    const result = await executeRequest({
+      query: 'sp_buscarProductos',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json({
+      success: true,
+      result: result.recordset
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error al buscar productos",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Controller para obtener información de un producto
+ */
+export const obtenerInfoProducto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idProducto } = req.query as any;
+
+    const inputs = [
+      { name: 'idProducto', type: sql.Int, value: parseInt(idProducto) }
+    ];
+
+    const result = await executeRequest({
+      query: 'sp_obtenerInfoProducto',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json({
+      success: true,
+      result: result.recordset
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener información del producto",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Controller para obtener tipos de producto
+ */
+export const obtenerTiposProducto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await executeRequest({
+      query: 'sp_obtenerTiposProducto',
+      inputs: [] as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json(result.recordset);
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener tipos de producto",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Controller para consultar precio de producto
+ * Ejecuta sp_consultaPrecioProducto que busca por código, código de barra o nombre
+ */
+export const consultarPrecioProducto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { busqueda } = req.query as any;
+
+    if (!busqueda) {
+      res.status(400).json({
+        success: false,
+        message: "El parámetro 'busqueda' es obligatorio"
+      });
+      return;
+    }
+
+    const inputs = [
+      { name: 'busqueda', type: sql.VarChar, value: busqueda }
+    ];
+
+    const result = await executeRequest({
+      query: 'sp_consultaPrecioProducto',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json({
+      success: true,
+      result: result.recordset
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error al consultar precio del producto",
+      error: error.message
+    });
   }
 };

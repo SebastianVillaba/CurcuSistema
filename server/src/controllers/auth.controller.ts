@@ -21,7 +21,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     // Verificar si el usuario ya existe
     const checkResult = await executeRequest({
-      query: `SELECT * FROM usuarios WHERE username = '${username}'`
+      query: `SELECT * FROM usuario WHERE username = '${username}'`
     });
 
     // Si es que el resultado tiene una longitud mayor a 0, significa que el usuario ya existe.
@@ -35,7 +35,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Insertar usuario
     await executeRequest({
-      query: `INSERT INTO usuarios (username, password, role) VALUES ('${username}', '${hashedPassword}', '${role}')`
+      query: `INSERT INTO usuario (username, password) VALUES ('${username}', '${hashedPassword}')`
     });
 
     res.status(201).json({ message: "Usuario creado exitosamente" });
@@ -55,7 +55,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
   try {
     const result = await executeRequest({
-      query: `SELECT * FROM usuarios WHERE username = '${username}'`
+      query: `SELECT * FROM usuario WHERE username = '${username}'`
     });
 
     if (result.recordset.length === 0) {
@@ -72,7 +72,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: user.id, username: user.username },
       process.env.JWT_SECRET || "mi_secreto_temporal",
       { expiresIn: "1h" }
     );

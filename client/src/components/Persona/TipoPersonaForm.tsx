@@ -185,6 +185,15 @@ export const TipoPersonaForm = ({ formData, setFormData }: TipoPersonaFormProps)
                             sx={{ width: '200px' }}
                             helperText="Dejar en 0 para auto-generar"
                         />
+                        <TextField
+                            label="ID Grupo Cliente"
+                            value={formData.idGrupoCliente || 0}
+                            onChange={handleChange('idGrupoCliente')}
+                            size="small"
+                            type="number"
+                            sx={{ width: '200px' }}
+                            helperText="ID del grupo al que pertenece"
+                        />
                     </Stack>
                 </Box>
             )}

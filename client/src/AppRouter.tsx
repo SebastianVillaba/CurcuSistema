@@ -47,9 +47,8 @@ const AppRouter: React.FC = () => {
             <Route path="facturacion-clientes" element={<FacturacionClientes />} />
         </Route>
         <Route path="facturacion" element={<Facturacion />} />
+        <Route path="pedidos" element={<Pedidos />} />
       </Route>
-
-      <Route path="pedidos" element={<Pedidos />} />
 
       {/* Redirección por defecto al login */}
       <Route path="*" element={<Navigate to="/login" replace />} />

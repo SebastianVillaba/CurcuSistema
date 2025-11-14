@@ -265,17 +265,16 @@ export const buscarInfoPersona = async (req: Request, res: Response): Promise<vo
 }
 
 /**
- * Controller para consultar una persona por su RUC
- * Utiliza el stored procedure sp_consultaPersonaRuc
- * 
- * @param req - Request con el parámetro ruc en query
- * @param res - Response con la información de la persona
+ * Controller para buscar un cliente por su RUC
+ * Si la persona existe pero no es cliente, lo crea automáticamente
+ * @param req - Request con el parámetro ruc en query y idUsuario
+ * @param res - Response con la información del cliente
  */
-export const consultarPersonaPorRuc = async (req: Request, res: Response): Promise<void> => {
+export const buscarClientePorRuc = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { ruc } = req.query;
+    const { ruc, idUsuario } = req.query;
     
-    // Validar que el parámetro exista
+    // Validar que los parámetros existan
     if (!ruc) {
       res.status(400).json({
         success: false,
@@ -284,14 +283,27 @@ export const consultarPersonaPorRuc = async (req: Request, res: Response): Promi
       return;
     }
 
+    if (!idUsuario) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro idUsuario es requerido'
+      });
+      return;
+    }
+
     const result = await executeRequest({
-      query: 'sp_consultaPersonaRuc',
+      query: 'sp_buscarClientePorRuc',
       isStoredProcedure: true,
       inputs: [
         {
-          name: 'busqueda',
-          type: sql.VarChar,
+          name: 'ruc',
+          type: sql.VarChar(10),
           value: ruc
+        },
+        {
+          name: 'idUsuario',
+          type: sql.Int,
+          value: parseInt(idUsuario as string)
         }
       ]
     });
@@ -307,8 +319,115 @@ export const consultarPersonaPorRuc = async (req: Request, res: Response): Promi
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error al consultar persona por RUC',
+      message: 'Error al buscar cliente por RUC',
       error: error instanceof Error ? error.message : 'Error desconocido'
     });
   }
-}
+};
+
+/**
+ * Controller para agregar un cliente rápidamente
+ * @param req - Request con los datos del cliente
+ * @param res - Response con el cliente creado
+ */
+export const agregarClienteRapido = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      ruc,
+      dv,
+      nombre,
+      apellido,
+      direccion,
+      fechaNacimiento,
+      celular,
+      email,
+      idCiudad,
+      idUsuarioAlta
+    } = req.body;
+
+    // Validar parámetros obligatorios
+    if (!ruc || !nombre || !apellido || !idCiudad || !idUsuarioAlta) {
+      res.status(400).json({
+        success: false,
+        message: 'Faltan parámetros obligatorios: ruc, nombre, apellido, idCiudad, idUsuarioAlta'
+      });
+      return;
+    }
+
+    const result = await executeRequest({
+      query: 'sp_agregarClienteRapido',
+      isStoredProcedure: true,
+      inputs: [
+        { name: 'ruc', type: sql.VarChar(10), value: ruc },
+        { name: 'dv', type: sql.VarChar(1), value: dv || '' },
+        { name: 'nombre', type: sql.VarChar(40), value: nombre },
+        { name: 'apellido', type: sql.VarChar(40), value: apellido },
+        { name: 'direccion', type: sql.VarChar(100), value: direccion || null },
+        { name: 'fechaNacimiento', type: sql.Date, value: fechaNacimiento || null },
+        { name: 'celular', type: sql.VarChar(20), value: celular || null },
+        { name: 'email', type: sql.VarChar(50), value: email || null },
+        { name: 'idCiudad', type: sql.Int, value: idCiudad },
+        { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta }
+      ]
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Cliente agregado exitosamente',
+      result: result.recordset[0]
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al agregar cliente',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};
+
+/**
+ * Controller para consultar clientes por nombre
+ * @param req - Request con el parámetro busqueda en query
+ * @param res - Response con la lista de clientes encontrados
+ */
+export const consultaCliente = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { busqueda } = req.query;
+    
+    // Validar que el parámetro exista
+    if (!busqueda) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro busqueda es requerido'
+      });
+      return;
+    }
+
+    const result = await executeRequest({
+      query: 'sp_consultaCliente',
+      isStoredProcedure: true,
+      inputs: [
+        {
+          name: 'busqueda',
+          type: sql.VarChar(20),
+          value: busqueda
+        }
+      ]
+    });
+
+    const rowsAffected = result.rowsAffected[0];
+
+    res.status(200).json({
+      success: true,
+      message: 'Consulta exitosa',
+      result: result.recordset,
+      rowsAffected: rowsAffected
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al consultar cliente',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};

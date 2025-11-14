@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,8 +13,12 @@ import {
   IconButton,
   Typography,
   Box,
+  TextField,
+  Alert,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import { productoService } from '../services/producto.service';
 
 interface ProductoResultado {
   idProducto: number;
@@ -29,20 +33,71 @@ interface ProductoResultado {
 interface SearchProductModalProps {
   open: boolean;
   onClose: () => void;
-  productos: ProductoResultado[];
+  idTerminalWeb: number;
   onSelectProduct: (producto: ProductoResultado) => void;
 }
 
 const SearchProductModal: React.FC<SearchProductModalProps> = ({
   open,
   onClose,
-  productos,
+  idTerminalWeb,
   onSelectProduct,
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [productos, setProductos] = useState<ProductoResultado[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      setProductos([]);
+      setError('');
+      return;
+    }
+
+    setIsSearching(true);
+    setError('');
+    
+    try {
+      const results = await productoService.consultarPrecioProducto(searchTerm.trim(), idTerminalWeb);
+      
+      if (results.length === 1) {
+        onSelectProduct(results[0]);
+        onClose();
+      } else {
+        setProductos(results);
+        if (results.length === 0) {
+          setError('No se encontraron productos');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error al buscar productos:', error);
+      setError(error.message || 'Error al buscar productos');
+      setProductos([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const handleRowClick = (producto: ProductoResultado) => {
     onSelectProduct(producto);
     onClose();
   };
+
+  // Reset state when modal opens
+  React.useEffect(() => {
+    if (open) {
+      setSearchTerm('');
+      setProductos([]);
+      setError('');
+    }
+  }, [open]);
 
   return (
     <Dialog
@@ -66,7 +121,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
         py: 1.5
       }}>
         <Typography variant="h6" component="div">
-          Búsqueda
+          Búsqueda de Productos
         </Typography>
         <IconButton
           edge="end"
@@ -79,14 +134,45 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
         </IconButton>
       </DialogTitle>
       
-      <DialogContent sx={{ p: 0 }}>
-        {productos.length === 0 ? (
+      <DialogContent sx={{ p: 2 }}>
+        {/* Search bar */}
+        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+          <TextField
+            fullWidth
+            label="Buscar producto"
+            size="small"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ingrese código, código de barra o nombre del producto"
+            disabled={isSearching}
+          />
+          <IconButton
+            color="primary"
+            onClick={handleSearch}
+            disabled={isSearching || !searchTerm.trim()}
+            size="small"
+          >
+            <SearchIcon />
+          </IconButton>
+        </Box>
+
+        {/* Error message */}
+        {error && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {productos.length === 0 && !isSearching && searchTerm && (
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <Typography color="text.secondary">
-              No se encontraron productos
+              No se encontraron productos. Intente con otro término de búsqueda.
             </Typography>
           </Box>
-        ) : (
+        )}
+
+        {productos.length > 0 && (
           <TableContainer component={Paper} elevation={0}>
             <Table size="small" stickyHeader>
               <TableHead>

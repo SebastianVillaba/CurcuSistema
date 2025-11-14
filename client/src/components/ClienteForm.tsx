@@ -42,6 +42,7 @@ interface ClienteFormProps {
   open: boolean;
   onClose: () => void;
   onClienteSelected: (cliente: ClienteData) => void;
+  onSuccess?: () => void;
 }
 
 const paises = ['PARAGUAY', 'ARGENTINA', 'BRASIL', 'CHILE', 'URUGUAY', 'BOLIVIA'];
@@ -50,7 +51,9 @@ const tiposDocumento = [
   { id: 2, nombre: 'RUC' },
 ];
 
-const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelected }) => {
+const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelected, onSuccess }) => {
+  const [idPersona, setIdPersona] = useState<number | undefined>();
+  const [clienteEncontrado, setClienteEncontrado] = useState(false);
   const [ruc, setRuc] = useState('');
   const [dv, setDv] = useState('');
   const [nombre, setNombre] = useState('');
@@ -64,6 +67,9 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // TODO: Obtener idUsuario del contexto de autenticación
+  const idUsuario = 1; // Temporal
   
   // Estados para ubicación
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
@@ -160,10 +166,14 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     setError('');
 
     try {
-      const resultado = await personaService.consultarPersonaPorRuc(ruc);
+      const resultado = await personaService.buscarClientePorRuc(ruc, idUsuario);
       
       if (resultado && resultado.length > 0) {
         const cliente = resultado[0];
+        
+        // Guardar el idCliente
+        setIdPersona(cliente.idCliente);
+        setClienteEncontrado(true);
         
         // Llenar los campos con la información encontrada
         setNombre(cliente.nombre || '');
@@ -183,18 +193,41 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
           const fecha = new Date(cliente.fechaNacimiento);
           setFechaNacimiento(fecha.toISOString().split('T')[0]);
         }
+        
+        // Seleccionar automáticamente el cliente encontrado
+        const clienteData: ClienteData = {
+          idPersona: cliente.idCliente,
+          ruc: cliente.ruc || ruc,
+          dv: cliente.dv?.toString() || dv,
+          nombre: cliente.nombre || '',
+          apellido: cliente.apellido || '',
+          direccion: cliente.direccion || '',
+          idDepartamento: cliente.idDepartamento,
+          idDistrito: cliente.idDistrito,
+          idCiudad: cliente.idCiudad?.toString(),
+          telefono: cliente.telefono,
+          celular: cliente.celular,
+          email: cliente.email,
+          fechaNacimiento: cliente.fechaNacimiento
+        };
+        
+        onClienteSelected(clienteData);
+        handleCancelar();
       } else {
-        setError('No se encontró ningún cliente con ese RUC');
+        // No se encontró, permitir agregar nuevo cliente
+        setClienteEncontrado(false);
+        setError('Cliente no encontrado. Complete los datos para agregarlo.');
       }
     } catch (err: any) {
       console.error('Error al buscar cliente:', err);
       setError('Error al buscar cliente por RUC');
+      setClienteEncontrado(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     // Validaciones
     if (!ruc.trim()) {
       setError('El RUC es obligatorio');
@@ -205,28 +238,90 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
       setError('El nombre es obligatorio');
       return;
     }
+    
+    if (!apellido.trim()) {
+      setError('El apellido es obligatorio');
+      return;
+    }
+    
+    if (!idCiudad) {
+      setError('Debe seleccionar una ciudad');
+      return;
+    }
 
-    const clienteData: ClienteData = {
-      ruc,
-      dv,
-      nombre,
-      apellido,
-      direccion,
-      idDepartamento,
-      idDistrito,
-      idCiudad,
-      telefono,
-      celular,
-      email,
-      fechaNacimiento,
-    };
+    // Si el cliente ya fue encontrado, solo seleccionarlo
+    if (clienteEncontrado && idPersona) {
+      const clienteData: ClienteData = {
+        idPersona,
+        ruc,
+        dv,
+        nombre,
+        apellido,
+        direccion,
+        idDepartamento,
+        idDistrito,
+        idCiudad,
+        telefono,
+        celular,
+        email,
+        fechaNacimiento,
+      };
+      
+      onClienteSelected(clienteData);
+      handleCancelar();
+      return;
+    }
 
-    onClienteSelected(clienteData);
-    handleCancelar();
+    // Si no fue encontrado, agregar nuevo cliente
+    setLoading(true);
+    setError('');
+    
+    try {
+      const nuevoCliente = await personaService.agregarClienteRapido({
+        ruc,
+        dv,
+        nombre,
+        apellido,
+        direccion: direccion || undefined,
+        fechaNacimiento: fechaNacimiento || undefined,
+        celular: celular || undefined,
+        email: email || undefined,
+        idCiudad: parseInt(idCiudad),
+        idUsuarioAlta: idUsuario
+      });
+      
+      // Seleccionar el cliente recién creado
+      const clienteData: ClienteData = {
+        idPersona: nuevoCliente.idCliente,
+        ruc: nuevoCliente.ruc,
+        dv: nuevoCliente.dv,
+        nombre: nombre,
+        apellido: apellido,
+        direccion: nuevoCliente.direccion,
+        idDepartamento,
+        idDistrito,
+        idCiudad,
+        telefono,
+        celular,
+        email,
+        fechaNacimiento,
+      };
+      
+      onClienteSelected(clienteData);
+      handleCancelar();
+      onSuccess?.();
+    } catch (err: any) {
+      console.error('Error al agregar cliente:', err);
+      setError(err.message || 'Error al agregar cliente');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancelar = () => {
     // Limpiar formulario
+    setIdPersona(undefined);
+    setClienteEncontrado(false);
     setRuc('');
     setDv('');
     setNombre('');
@@ -305,7 +400,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
           <Stack direction="row" spacing={2}>
             <TextField
               fullWidth
-              label="Nombre y Apellido"
+              label="Nombre"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               size="small"
@@ -408,7 +503,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
           Salir
         </Button>
         <Button onClick={handleGuardar} variant="contained" startIcon={<SaveIcon />} color="primary">
-          Guardar
+          {clienteEncontrado ? 'Añadir' : 'Guardar'}
         </Button>
       </DialogActions>
     </Dialog>

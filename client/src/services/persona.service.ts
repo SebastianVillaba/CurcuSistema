@@ -57,6 +57,7 @@ interface PersonaInfo {
   timbrado?: string | null;
   
   // Campos de cliente
+  idCliente?: number;
   codigo?: number;
   idGrupoCliente?: number;
   nombreGrupoCliente?: string;
@@ -138,24 +139,49 @@ export const personaService = {
   },
 
   /**
-   * Consulta una persona por su RUC
-   * @param ruc - RUC de la persona a buscar
-   * @returns Información completa de la persona
+   * Busca un cliente por su RUC
+   * Si la persona existe pero no es cliente, lo crea automáticamente
+   * @param ruc - RUC del cliente a buscar
+   * @param idUsuario - ID del usuario que realiza la búsqueda
+   * @returns Información completa del cliente
    */
-  consultarPersonaPorRuc: async (ruc: string): Promise<PersonaInfo[]> => {
+  buscarClientePorRuc: async (ruc: string, idUsuario: number): Promise<PersonaInfo[]> => {
     try {
       const response = await axios.get<PersonaInfoResponse>(
-        `${API_BASE_URL}/persona/consultaRuc`,
+        `${API_BASE_URL}/persona/buscarCliente`,
         {
           params: {
-            ruc: ruc
+            ruc: ruc,
+            idUsuario: idUsuario
           }
         }
       );
       return response.data.result;
     } catch (error: any) {
-      console.error('Error al consultar persona por RUC:', error);
-      throw new Error('Error al consultar persona por RUC');
+      console.error('Error al buscar cliente por RUC:', error);
+      throw new Error('Error al buscar cliente por RUC');
+    }
+  },
+
+  /**
+   * Consulta clientes por nombre
+   * @param busqueda - Término de búsqueda (nombre)
+   * @returns Lista de clientes encontrados
+   */
+  consultaCliente: async (busqueda: string): Promise<any[]> => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/persona/consultaCliente`,
+        {
+          params: {
+            busqueda: busqueda
+          }
+        }
+      );
+      return response.data.result;
+    } catch (error: any) {
+      console.error('Error al consultar cliente:', error);
+      throw new Error(error.response?.data?.message || 'Error al consultar cliente');
     }
   }
 };

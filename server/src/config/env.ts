@@ -15,7 +15,7 @@ const envSchema = z.object({
   DB_NAME: z.string(),
   DB_USER: z.string().optional().default(''),
   DB_PASSWORD: z.string().optional().default(''),
-  JWT_SECRET: z.string().optional().default('mi_secreto_temporal')
+  JWT_SECRET: z.string().optional().default('mi_secreto_temporal'),
 });
 
 export const env = envSchema.parse(process.env);

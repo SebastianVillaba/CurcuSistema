@@ -177,7 +177,7 @@ export const obtenerTiposProducto = async (req: Request, res: Response): Promise
  */
 export const consultarPrecioProducto = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { busqueda } = req.query as any;
+    const { busqueda, idTerminalWeb } = req.query as any;
 
     if (!busqueda) {
       res.status(400).json({
@@ -187,8 +187,17 @@ export const consultarPrecioProducto = async (req: Request, res: Response): Prom
       return;
     }
 
+    if (!idTerminalWeb) {
+      res.status(400).json({
+        success: false,
+        message: "El parámetro 'idTerminalWeb' es obligatorio"
+      });
+      return;
+    }
+
     const inputs = [
-      { name: 'busqueda', type: sql.VarChar, value: busqueda }
+      { name: 'busqueda', type: sql.VarChar, value: busqueda },
+      { name: 'idTerminalWeb', type: sql.Int, value: parseInt(idTerminalWeb) }
     ];
 
     const result = await executeRequest({
@@ -202,10 +211,18 @@ export const consultarPrecioProducto = async (req: Request, res: Response): Prom
       result: result.recordset
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: "Error al consultar precio del producto",
-      error: error.message
-    });
+    // Captura el RAISERROR del SP si la terminal no tiene depósito
+    if (error.number >= 50000) { 
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    } else {
+        res.status(500).json({
+            success: false,
+            message: "Error al consultar precio del producto",
+            error: error.message
+        });
+    }
   }
 };

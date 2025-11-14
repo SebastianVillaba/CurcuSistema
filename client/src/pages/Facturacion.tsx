@@ -13,12 +13,7 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Autocomplete,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormControl,
   InputLabel,
   Select,
@@ -27,37 +22,47 @@ import {
   CardContent,
   Stack,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
+import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 import type { ItemFactura, Cliente } from '../types/factura.types';
 import type { Caja } from '../types/caja.types';
-import { productoService } from '../services/producto.service';
+import { ventaService } from '../services/venta.service';
+import { reporteService } from '../services/reporte.service';
+import facturaService, { ticketService } from '../services/ticket.service';
+import type { DatosFactura, DatosTicket } from '../types/ticket.types';
 import SearchProductModal from '../components/SearchProductModal';
 import ClienteForm from '../components/ClienteForm';
 import CajaSelectorModal from '../components/CajaSelectorModal';
+import PagoModal from '../components/PagoModal';
+import TipoComprobanteModal from '../components/TipoComprobanteModal';
+import GastoModal from '../components/GastoModal';
+import { useTerminal } from '../hooks/useTerminal';
+import SearchClienteModal from '../components/SearchClienteModal';
 
 const Facturacion: React.FC = () => {
-  const [numeroFactura, setNumeroFactura] = useState('001-005-1102');
+  // Obtener información de la terminal
+  const { idTerminalWeb } = useTerminal();
+  const [numeroFactura, setNumeroFactura] = useState<string | undefined>();
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [condicion, setCondicion] = useState<'CONTADO' | 'CREDITO'>('CONTADO');
   const [items, setItems] = useState<ItemFactura[]>([]);
-  const [observaciones, setObservaciones] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+  
+  // TODO: Obtener idUsuario del contexto de autenticación
+  const idUsuario = 1; // Temporal - reemplazar con usuario autenticado
   
   // Estados para búsqueda
   const [clientesOptions, setClientesOptions] = useState<Cliente[]>([]);
   const [productosOptions, setProductosOptions] = useState<ItemFactura[]>([]);
   const [termino, setTermino] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [openSearchModal, setOpenSearchModal] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [cantidadProducto, setCantidadProducto] = useState(1);
   
   // Dialog para agregar producto
@@ -66,62 +71,59 @@ const Facturacion: React.FC = () => {
   const [cantidad, setCantidad] = useState(1);
   
   // Modal de cliente
-  const [openClienteForm, setOpenClienteForm] = useState(false);
+  const [openClienteModal, setOpenClienteModal] = useState(false);
   
   // Modal de caja
   const [openCajaSelector, setOpenCajaSelector] = useState(false);
   const [cajaSeleccionada, setCajaSeleccionada] = useState<Caja | null>(null);
+  
+  // Modales de pago y tipo de comprobante
+  const [openPagoModal, setOpenPagoModal] = useState(false);
+  const [openTipoComprobanteModal, setOpenTipoComprobanteModal] = useState(false);
+  
+  // Modal de gastos
+  const [openGastoModal, setOpenGastoModal] = useState(false);
 
   // Calcular totales
   const calcularTotales = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const descuentoTotal = items.reduce((sum, item) => sum + item.descuento, 0);
+    const subtotal = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    const descuentoTotal = items.reduce((sum, item) => sum + (item.descuento || 0), 0);
+    const iva5Total = items.reduce((sum, item) => sum + (item.iva5 || 0), 0);
+    const iva10Total = items.reduce((sum, item) => sum + (item.iva10 || 0), 0);
+    const ivaTotal = iva5Total + iva10Total;
     const total = subtotal - descuentoTotal;
-    return { subtotal, descuentoTotal, total };
+    return { subtotal, descuentoTotal, total, iva5Total, iva10Total, ivaTotal };
   };
 
-  const { subtotal, descuentoTotal, total } = calcularTotales();
+  const { subtotal, descuentoTotal, total, iva5Total, iva10Total, ivaTotal } = calcularTotales();
 
-  // Handlers para búsqueda de clientes (mock data temporal)
-  const handleBuscarClientes = async (termino: string) => {
-    if (termino.length < 2) return;
-    // TODO: Conectar con el backend cuando esté listo
-    const mockClientes: Cliente[] = [
-      { idCliente: 1, nombre: 'Cliente Ejemplo 1', direccion: 'Calle 123', telefono: '123456', documento: '12345678' },
-      { idCliente: 2, nombre: 'Cliente Ejemplo 2', direccion: 'Av. Principal 456', telefono: '654321', documento: '87654321' },
-    ];
-    setClientesOptions(mockClientes.filter(c => c.nombre.toLowerCase().includes(termino.toLowerCase())));
-  };
+  // Atajo de teclado Alt+T para terminar venta y Ctrl+C para buscar clientes
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey && event.key.toLowerCase() === 't') {
+        event.preventDefault();
+        if (items.length > 0) {
+          handleTerminarVenta();
+        }
+      }
+      if (event.altKey && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        setOpenClienteModal(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [items]);
 
   // Handlers para búsqueda de productos usando sp_consultaPrecioProducto
   const handleBuscarProductos = async (busqueda: string) => {
     if (!busqueda || busqueda.length < 1) {
-      setSearchResults([]);
       return;
     }
 
-    setIsSearching(true);
-    try {
-      const results = await productoService.consultarPrecioProducto(busqueda);
-      
-      if (results.length === 0) {
-        setError('No se encontraron productos');
-        setSearchResults([]);
-      } else if (results.length === 1) {
-        // Si solo hay 1 resultado, agregarlo directamente
-        handleAgregarDesdeResultado(results[0]);
-      } else {
-        // Si hay múltiples resultados, mostrar el modal
-        setSearchResults(results);
-        setOpenSearchModal(true);
-      }
-    } catch (error) {
-      console.error('Error al buscar productos:', error);
-      setError('Error al buscar productos');
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
+    // Abrir el modal de búsqueda de productos
+    setOpenSearchModal(true);
   };
 
   // Manejar búsqueda al presionar Enter y shortcut de cantidad
@@ -140,125 +142,361 @@ const Facturacion: React.FC = () => {
     }
   };
 
-  // Agregar producto desde los resultados de búsqueda
-  const handleAgregarDesdeResultado = (producto: any) => {
-    const nuevoItem: ItemFactura = {
-      idProducto: producto.idProducto,
-      codigo: producto.codigo,
-      nombreMercaderia: producto.nombreMercaderia,
-      descripcion: producto.nombreMercaderia,
-      origen: producto.origen === 'N' ? 'Nacional' : 'Importado',
-      unidades: cantidadProducto,
-      precio: producto.precio,
-      precioUnitario: producto.precio,
-      total: producto.precio * cantidadProducto,
-      descuento: 0,
-      stock: producto.stock,
-      nombreImpuesto: producto.nombreImpuesto
-    };
+  // Cargar items desde detVentaTmp
+  const cargarDetalleVenta = async () => {
+    if (!idTerminalWeb) return;
+    
+    setIsLoadingItems(true);
+    try {
+      const detalles = await ventaService.consultarDetalleVenta(idTerminalWeb, idUsuario);
+      
+      const itemsFormateados: ItemFactura[] = detalles.map(det => {
+        let iva5 = 0;
+        let iva10 = 0;
+        let gravada5 = 0;
+        let gravada10 = 0;
+        let exenta = 0;
 
-    setItems([...items, nuevoItem]);
-    setTermino('');
-    setSearchResults([]);
-    setCantidadProducto(1); // Resetear cantidad a 1
+        if (det.nombreImpuesto === 'IVA 10%') {
+          iva10 = det.total / 11;
+          gravada10 = det.total - iva10;
+        } else if (det.nombreImpuesto === 'IVA 5%') {
+          iva5 = det.total / 21;
+          gravada5 = det.total - iva5;
+        } else {
+          exenta = det.total;
+        }
+
+        return {
+          idDetVentaTmp: det.idDetVentaTmp,
+          nro: 0,
+          idProducto: det.idProducto,
+          nombreMercaderia: det.nombreMercaderia,
+          descripcion: det.nombreMercaderia,
+          origen: det.origen,
+          unidades: det.cantidad,
+          precioUnitario: det.precioUnitario,
+          descuento: det.precioDescuento,
+          subtotal: det.total,
+          gravada10,
+          gravada5,
+          exenta,
+          iva10: iva10 || 0,
+          iva5: iva5 || 0,
+          ivaTotal: (iva5 || 0) + (iva10 || 0),
+          precio: det.precioUnitario
+        };
+      });
+      
+      setItems(itemsFormateados);
+    } catch (error: any) {
+      console.error('Error al cargar detalle de venta:', error);
+      setError(error.message || 'Error al cargar productos');
+    } finally {
+      setIsLoadingItems(false);
+    }
   };
 
-  // Agregar producto a la factura
-  const handleAgregarProducto = () => {
-    if (!selectedProduct) return;
+  // Cargar items y número de factura al montar el componente
+  useEffect(() => {
+    cargarDetalleVenta();
     
-    const precioUnit = selectedProduct.precioUnitario || selectedProduct.precio || 0;
-    
-    const nuevoItem: ItemFactura = {
-      ...selectedProduct,
-      unidades: cantidad,
-      precioUnitario: precioUnit,
-      total: precioUnit * cantidad,
+    // Cargar número de factura inicial
+    const cargarNumeroFactura = async () => {
+      if (!idTerminalWeb) return;
+      
+      try {
+        const facturaData = await ventaService.consultaFacturaCorrelativa(idTerminalWeb);
+        if (facturaData && facturaData.length > 0) {
+          const nroFactura = facturaData[0].nroFacturaFormateado;
+          setNumeroFactura(nroFactura?.toString());
+        }
+      } catch (error: any) {
+        console.error('Error al cargar número de factura:', error);
+      }
     };
     
-    setItems([...items, nuevoItem]);
-    setOpenProductDialog(false);
-    setSelectedProduct(null);
-    setCantidad(1);
+    cargarNumeroFactura();
+  }, [idTerminalWeb]);
+
+  // Agregar producto desde los resultados de búsqueda
+  const handleAgregarDesdeResultado = async (producto: any) => {
+    if (!idTerminalWeb) {
+      setError('No hay terminal configurada');
+      return;
+    }
+
+    try {
+      // Agregar a la BD
+      await ventaService.agregarDetalleVenta({
+        idTerminalWeb,
+        idUsuario,
+        idProducto: producto.idProducto,
+        idStock: producto.idStock || 1, // TODO: Obtener idStock correcto
+        cantidad: cantidadProducto,
+        precioUnitario: producto.precio,
+        precioDescuento: 0
+      });
+
+      // Recargar la lista
+      await cargarDetalleVenta();
+      
+      setTermino('');
+      setCantidadProducto(1);
+    } catch (error: any) {
+      console.error('Error al agregar producto:', error);
+      setError(error.message || 'Error al agregar producto');
+    }
   };
 
   // Eliminar producto de la factura
-  const handleEliminarItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+  const handleEliminarItem = async (index: number) => {
+    const item = items[index];
+    
+    if (!item.idDetVentaTmp) {
+      // Si no tiene idDetVentaTmp, solo eliminar del estado local
+      setItems(items.filter((_, i) => i !== index));
+      return;
+    }
+
+    if (!idTerminalWeb) {
+      setError('No hay terminal configurada');
+      return;
+    }
+
+    try {
+      // Eliminar de la BD
+      await ventaService.eliminarDetalleVenta(idTerminalWeb, item.idDetVentaTmp);
+      
+      // Recargar la lista
+      await cargarDetalleVenta();
+      
+    } catch (error: any) {
+      console.error('Error al eliminar producto:', error);
+      setError(error.message || 'Error al eliminar producto');
+    }
   };
 
-  // Actualizar cantidad de un item
-  const handleActualizarCantidad = (index: number, nuevaCantidad: number) => {
-    const nuevosItems = [...items];
-    nuevosItems[index].unidades = nuevaCantidad;
-    const precioUnit = nuevosItems[index].precioUnitario || nuevosItems[index].precio || 0;
-    nuevosItems[index].total = nuevaCantidad * precioUnit;
-    setItems(nuevosItems);
-  };
-
-  // Actualizar descuento de un item
-  const handleActualizarDescuento = (index: number, nuevoDescuento: number) => {
-    const nuevosItems = [...items];
-    nuevosItems[index].descuento = nuevoDescuento;
-    setItems(nuevosItems);
-  };
-
-  // Guardar factura
-  const handleGuardarFactura = async () => {
+  // Iniciar proceso de terminar venta
+  const handleTerminarVenta = () => {
     setError('');
     setSuccess('');
 
     // Validaciones
-    if (!cliente) {
-      setError('Debe seleccionar un cliente');
-      return;
-    }
-
     if (items.length === 0) {
       setError('Debe agregar al menos un producto');
       return;
     }
 
-    // TODO: Implementar guardado real cuando el backend esté listo
-    setSuccess('Factura guardada exitosamente');
-    
-    // Limpiar formulario
-    setTimeout(() => {
-      handleNuevaFactura();
-    }, 2000);
+    // Abrir modal de pago
+    setOpenPagoModal(true);
   };
 
+  // Cuando se confirma el pago, abrir modal de tipo de comprobante
+  const handleConfirmarPago = () => {
+    setOpenPagoModal(false);
+    setOpenTipoComprobanteModal(true);
+  };
+
+  // Guardar venta según el tipo de comprobante seleccionado
+  const handleGuardarVenta = async (esTicket: boolean) => {
+    setOpenTipoComprobanteModal(false);
+    
+    try {
+      const { total, descuentoTotal } = calcularTotales();
+      const idMovimientoCaja = localStorage.getItem('idMovimientoCaja');
+      const idUsuario = localStorage.getItem('idUsuario') || '1';
+      
+      if (!idMovimientoCaja) {
+        setError('Debe abrir una caja antes de realizar una venta');
+        return;
+      }
+
+      const ventaData = {
+        idUsuarioAlta: parseInt(idUsuario),
+        idTerminalWeb: idTerminalWeb,
+        idPersonaJur: 1, // TODO: Obtener de la configuración
+        idMovimientoCaja: parseInt(idMovimientoCaja),
+        idTipoPago: 1, // TODO: Obtener del formulario
+        idTipoVenta: 1, // TODO: Obtener del formulario
+        idCliente: cliente?.idCliente || 8, // 8 = Cliente SIN NOMBRE
+        ruc: cliente?.documento || 'XXXXXXX',
+        nombreCliente: cliente?.nombre || 'SIN NOMBRE',
+        totalVenta: total,
+        totalDescuento: descuentoTotal,
+        ticket: esTicket ? 1 : 0
+      };
+
+      console.log('Venta a guardar:', ventaData);
+
+      const response = await ventaService.guardarVenta(ventaData);
+      
+      if (response.success) {
+        setSuccess(`${esTicket ? 'Ticket' : 'Factura'} guardada exitosamente`);
+        
+        // Generar e imprimir comprobante según el tipo seleccionado
+        if (response.idVenta) {
+          try {
+            if (esTicket) {
+              // Generar ticket simple
+              const datosReporte = await reporteService.obtenerDatosTicket(response.idVenta);
+              
+              const datosTicketSimple: DatosTicket = {
+                // Datos de la empresa
+                nombreFantasia: datosReporte.cabecera.nombreFantasia,
+                ruc: datosReporte.cabecera.ruc,
+                nombreSucursal: datosReporte.cabecera.nombreSucursal,
+                nombreTipoPago: datosReporte.cabecera.nombreTipoPago,
+                
+                // Datos de la venta
+                fechaHora: new Date(datosReporte.cabecera.fechaHora),
+                idVenta: response.idVenta,
+                total: datosReporte.cabecera.total,
+                
+                // Datos del cliente
+                cliente: datosReporte.cabecera.cliente,
+                rucCliente: datosReporte.cabecera.rucCliente,
+                
+                // Información adicional
+                vendedor: datosReporte.cabecera.vendedor || 'Sistema',
+                totalLetra: datosReporte.cabecera.totalLetra,
+                leyenda: datosReporte.cabecera.leyenda,
+                
+                // Items
+                items: datosReporte.items.map((item: any) => ({
+                  cantidad: item.cantidad,
+                  codigo: item.codigo,
+                  mercaderia: item.mercaderia,
+                  precio: item.precio,
+                  subtotal: item.subtotal
+                }))
+              };
+              
+              await ticketService.generarTicket(datosTicketSimple);
+            } else {
+              // Generar factura completa
+              const datosReporte = await reporteService.obtenerDatosFactura(response.idVenta);
+              
+              const datosFactura: DatosFactura = {
+                // Datos de la empresa
+                nombreFantasia: datosReporte.cabecera.nombreFantasia,
+                empresaContable: datosReporte.cabecera.empresaContable,
+                rubro: datosReporte.cabecera.rubro,
+                ruc: datosReporte.cabecera.ruc,
+                direccion: datosReporte.cabecera.direccionEmpresa,
+                telefono: datosReporte.cabecera.telefonoEmpresa,
+                
+                // Datos de la venta
+                fechaHora: new Date(datosReporte.cabecera.fechaHora),
+                nroFactura: `${numeroFactura}`,
+                total: datosReporte.cabecera.total,
+                
+                // Datos de control fiscal
+                timbrado: datosReporte.cabecera.timbrado,
+                fechaInicioVigencia: new Date(datosReporte.cabecera.fechaInicioVigencia),
+                fechaFinVigencia: new Date(datosReporte.cabecera.fechaFinVigencia),
+                
+                // Datos del cliente
+                cliente: datosReporte.cabecera.cliente,
+                rucCliente: datosReporte.cabecera.rucCliente,
+                direccionCliente: cliente?.direccion || '',
+                telefonoCliente: cliente?.telefono || '',
+                
+                // Información adicional
+                vendedor: 'Sistema', // TODO: Obtener del usuario logueado
+                tipoFactura: datosReporte.cabecera.tipoFactura,
+                formaVenta: datosReporte.cabecera.formaVenta,
+                
+                // Liquidación IVA
+                gravada10: datosReporte.cabecera.gravada10,
+                gravada5: datosReporte.cabecera.gravada5,
+                exenta: datosReporte.cabecera.exenta,
+                iva10: datosReporte.cabecera.iva10,
+                iva5: datosReporte.cabecera.iva5,
+                totalIva: datosReporte.cabecera.totalIva,
+                
+                // Items
+                items: datosReporte.items.map((item: any) => ({
+                  cantidad: item.cantidad,
+                  codigo: item.codigo,
+                  mercaderia: item.mercaderia,
+                  precio: item.precio,
+                  subtotal: item.subtotal,
+                  porcentajeImpuesto: item.porcentajeImpuesto
+                }))
+              };
+              
+              await facturaService.generarTicket(datosFactura);
+            }
+          } catch (error: any) {
+            console.error('Error al generar comprobante:', error);
+            setError(`Venta guardada pero hubo un error al generar el ${esTicket ? 'ticket' : 'comprobante de factura'}`);
+          }
+        }
+        
+        // Actualizar número de factura
+        try {
+          const facturaData = await ventaService.consultaFacturaCorrelativa(idTerminalWeb);
+          if (facturaData && facturaData.length > 0) {
+            const nroFactura = facturaData[0].nroFacturaFormateado;
+            setNumeroFactura(nroFactura?.toString());
+          }
+        } catch (error: any) {
+          console.error('Error al actualizar factura correlativa:', error);
+          setError(error?.message || 'Error al consultar la factura correlativa');
+        }
+        
+        // Limpiar formulario
+        setTimeout(() => {
+          handleNuevaFactura();
+        }, 2000);
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Error al guardar la venta');
+    }
+  };
+
+  // Mantener la función original por compatibilidad
+  const handleGuardarFactura = handleTerminarVenta;
+
   // Nueva factura
-  const handleNuevaFactura = () => {
+  const handleNuevaFactura = async () => {
     setCliente(null);
     setItems([]);
-    setObservaciones('');
     setError('');
     setSuccess('');
     // Incrementar número de factura
-    const partes = numeroFactura.split('-');
-    const ultimoNumero = parseInt(partes[2]) + 1;
-    setNumeroFactura(`${partes[0]}-${partes[1]}-${ultimoNumero.toString().padStart(4, '0')}`);
+    try {
+      const facturaData = await ventaService.consultaFacturaCorrelativa(idTerminalWeb);
+      if (facturaData && facturaData.length > 0) {
+        const nroFactura = facturaData[0].nroFacturaFormateado;
+        setNumeroFactura(nroFactura?.toString());
+      }
+    } catch (error: any) {
+      console.error('Error al consultar la factura correlativa:', error);
+      setError(error.message || 'Error al consultar la factura correlativa');
+      return;
+    }
   };
 
   // Handler para cuando se selecciona un cliente en el modal
   const handleClienteSelected = (clienteData: any) => {
+    // Validar que el cliente tenga un ID válido
+    if (!clienteData.idCliente || clienteData.idCliente === 0) {
+      setError('El cliente seleccionado no tiene un ID válido');
+      return;
+    }
+    
     const nuevoCliente: Cliente = {
-      idCliente: clienteData.idPersona || 0,
-      nombre: clienteData.nombre + (clienteData.apellido ? ' ' + clienteData.apellido : ''),
+      idCliente: clienteData.idCliente,
+      nombre: clienteData.nombreCliente,
       direccion: clienteData.direccion || '',
-      telefono: clienteData.celular || clienteData.telefono || '',
-      documento: clienteData.ruc || '',
+      telefono: clienteData.celular || '',
+      documento: clienteData.ruc.split('-')[0] || '',
       dv: clienteData.dv || ''
     };
     setCliente(nuevoCliente);
     setSuccess('Cliente seleccionado correctamente');
-  };
-
-  // Handler para cuando se selecciona una caja
-  const handleCajaSelected = (caja: Caja) => {
-    setCajaSeleccionada(caja);
-    setSuccess(`Caja ${caja.nombre} abierta correctamente`);
   };
 
   return (
@@ -267,7 +505,7 @@ const Facturacion: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <Paper sx={{ p: 2, mb: 2, width: '120vh' }}>
           <Grid container spacing={4}>
-            <Grid item size={6}>
+            <Grid xs={6}>
               <Stack spacing={1}>
                 <div>
                   <TextField 
@@ -301,10 +539,16 @@ const Facturacion: React.FC = () => {
                   value={cliente?.direccion || ''}
                   InputProps={{ readOnly: true }}
                 />
+                <TextField
+                  label="Telefono"
+                  size='small'
+                  value={cliente?.telefono || ''}
+                  InputProps={{ readOnly: true }}
+                />
               </Stack>
             </Grid>
             
-            <Grid item size={3}>
+            <Grid xs={3}>
               <Stack spacing={1}>
                 <TextField
                     fullWidth
@@ -321,8 +565,8 @@ const Facturacion: React.FC = () => {
                     sx={{
                       width: '10vh'
                     }}
-                    onClick={() => setOpenClienteForm(true)}
-                    title="Buscar/Agregar Cliente"
+                    onClick={() => setOpenClienteModal(true)}
+                    title="Buscar/Agregar Cliente (Alt+C)"
                   >
                     <PersonSearchIcon />
                   </Button>
@@ -339,6 +583,17 @@ const Facturacion: React.FC = () => {
                   </Button>
                   <Button 
                     variant='contained'
+                    color='error'
+                    sx={{
+                      width: '10vh'
+                    }}
+                    onClick={() => setOpenGastoModal(true)}
+                    title="Agregar Gasto"
+                  >
+                    <MoneyOffIcon />
+                  </Button>
+                  <Button 
+                    variant='contained'
                     sx={{
                       width: '10vh'
                     }}
@@ -349,7 +604,7 @@ const Facturacion: React.FC = () => {
                 
               </Stack>
             </Grid>
-            <Grid item size={3}>
+            <Grid xs={3}>
               <FormControl fullWidth size="small">
                 <InputLabel>Condición</InputLabel>
                 <Select
@@ -358,33 +613,41 @@ const Facturacion: React.FC = () => {
                   onChange={(e) => setCondicion(e.target.value as 'CONTADO' | 'CREDITO')}
                 >
                   <MenuItem value="CONTADO">Contado</MenuItem>
-                  <MenuItem value="CENTRAL">Credito</MenuItem>
+                  <MenuItem value="CREDITO">Credito</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
           </Grid>
         </Paper>
-        <Paper sx={{ p: 2, mb: 2 }}>
+        
+        <Paper sx={{ p: 2, mb: 2, height: '18vh' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant='h2'>₲</Typography>
-            <TextField
-              size='medium'
+            <Typography
+              variant='h3'
               sx={{
-                backgroundColor: "#2dfc61"
+                backgroundColor: "#2dfc61",
+                color: "black",
+                padding: '2px',
+                borderRadius: '5px',
+                border: '1.5px solid #000',
+                mx: 1,
+                width: '25vh',
+                textAlign: 'center'
               }}
-            />
+            >{total.toLocaleString()}</Typography>
+              
           </div>
-          <div>
-            <TextField
-              fullWidth
-              label="Número de Factura"
-              size="small"
-              value={numeroFactura}
-              onChange={(e) => setNumeroFactura(e.target.value)}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center'
+          }}>
+            <Typography
               sx={{
-                mt: 2
+                mt: 2,
               }}
-            />
+              variant='h5'
+            >{numeroFactura}</Typography>
           </div>
         </Paper>
       </div>
@@ -425,8 +688,7 @@ const Facturacion: React.FC = () => {
           />
           <Button
             variant="contained"
-            onClick={() => handleBuscarProductos(termino)}
-            disabled={isSearching || !termino}
+            onClick={() => setOpenSearchModal(true)}
             startIcon={<SearchIcon />}
           >
             Buscar
@@ -439,43 +701,27 @@ const Facturacion: React.FC = () => {
               <TableRow>
                 <TableCell>Descripción</TableCell>
                 <TableCell>Origen</TableCell>
-                <TableCell align="right">Cantidad</TableCell>
+                <TableCell align="center">Cantidad</TableCell>
                 <TableCell align="right">Precio Unit.</TableCell>
                 <TableCell align="right">Subtotal</TableCell>
                 <TableCell align="right">Descuento</TableCell>
-                <TableCell align="right">Total</TableCell>
-                <TableCell align="center">Acciones</TableCell>
+                <TableCell align="right">Prec. Descuento</TableCell>
+                <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {items.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>{item.descripcion || item.nombreMercaderia}</TableCell>
-                  <TableCell>{item.origen}</TableCell>
-                  <TableCell align="right">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={item.unidades}
-                      onChange={(e) => handleActualizarCantidad(index, parseFloat(e.target.value) || 0)}
-                      sx={{ width: 80 }}
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-                  </TableCell>
+                  <TableCell>{item.origen === 'N' ? 'Nacional' : 'Importado'}</TableCell>
+                  <TableCell align='center'>{item.unidades}</TableCell>
                   <TableCell align="right">₲{(item.precioUnitario || item.precio || 0).toLocaleString()}</TableCell>
-                  <TableCell align="right">₲{item.total.toLocaleString()}</TableCell>
+                  <TableCell align="right">₲{(item.subtotal || 0).toLocaleString()}</TableCell>
                   <TableCell align="right">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={item.descuento}
-                      onChange={(e) => handleActualizarDescuento(index, parseFloat(e.target.value) || 0)}
-                      sx={{ width: 80 }}
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
+                    {item.descuento}
                   </TableCell>
-                  <TableCell align="right">₲{(item.total - item.descuento).toLocaleString()}</TableCell>
-                  <TableCell align="center">
+                  <TableCell align="right">₲{((item.subtotal || 0) - (item.descuento || 0)).toLocaleString()}</TableCell>
+                  <TableCell align="right">
                     <IconButton size="small" color="error" onClick={() => handleEliminarItem(index)}>
                       <DeleteIcon />
                     </IconButton>
@@ -499,51 +745,65 @@ const Facturacion: React.FC = () => {
       {/* Totales y acciones */}
       <Paper sx={{ p: 2 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={3}>
             <Card variant="outlined">
               <CardContent>
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Typography variant="body2" color="text.secondary">Subtotal:</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Typography variant="body1" align="right">₲{subtotal.toLocaleString()}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Typography variant="body2" color="text.secondary">Descuento:</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Typography variant="body1" align="right" color="error">-₲{descuentoTotal.toLocaleString()}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="h6">Total:</Typography>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid xs={12} md={3}>
+            <Card variant="outlined">
+              <CardContent>
+                <Grid container spacing={1}>
+                  <Grid xs={6}>
+                    <Typography variant="body2" color="text.secondary">IVA 5%:</Typography>
                   </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="h6" align="right" color="primary">₲{total.toLocaleString()}</Typography>
+                  <Grid xs={6}>
+                    <Typography variant="body1" align="right">₲{iva5Total.toLocaleString()}</Typography>
+                  </Grid>
+                  <Grid xs={6}>
+                    <Typography variant="body2" color="text.secondary">IVA 10%:</Typography>
+                  </Grid>
+                  <Grid xs={6}>
+                    <Typography variant="body1" align="right">₲{iva10Total.toLocaleString()}</Typography>
+                  </Grid>
+                  <Grid xs={6}>
+                    <Typography variant="h6">Total IVA:</Typography>
+                  </Grid>
+                  <Grid xs={6}>
+                    <Typography variant="h6" align="right" color="primary">₲{ivaTotal.toLocaleString()}</Typography>
                   </Grid>
                 </Grid>
               </CardContent>
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={6}>
+          <Grid size={6}>
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<CancelIcon />}
-                onClick={handleNuevaFactura}
-              >
-                Cancelar
-              </Button>
               <Button
                 variant="contained"
                 color="success"
                 startIcon={<SaveIcon />}
                 onClick={handleGuardarFactura}
-                disabled={items.length === 0 || !cliente}
+                disabled={items.length === 0}
+                size="large"
               >
-                Guardar Factura
+                Terminar Venta (Alt+T)
               </Button>
             </Box>
           </Grid>
@@ -554,14 +814,14 @@ const Facturacion: React.FC = () => {
       <SearchProductModal
         open={openSearchModal}
         onClose={() => setOpenSearchModal(false)}
-        productos={searchResults}
+        idTerminalWeb={idTerminalWeb}
         onSelectProduct={handleAgregarDesdeResultado}
       />
 
-      {/* Modal de cliente */}
-      <ClienteForm
-        open={openClienteForm}
-        onClose={() => setOpenClienteForm(false)}
+      {/* Modal de búsqueda de cliente */}
+      <SearchClienteModal
+        open={openClienteModal}
+        onClose={() => setOpenClienteModal(false)}
         onClienteSelected={handleClienteSelected}
       />
 
@@ -569,51 +829,32 @@ const Facturacion: React.FC = () => {
       <CajaSelectorModal
         open={openCajaSelector}
         onClose={() => setOpenCajaSelector(false)}
-        onSelectCaja={handleCajaSelected}
+        onSelectCaja={(caja) => setCajaSeleccionada(caja)}
       />
 
-      {/* Dialog para agregar producto */}
-      <Dialog open={openProductDialog} onClose={() => setOpenProductDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Agregar Producto</DialogTitle>
-        <DialogContent>
-          <Autocomplete
-            options={productosOptions}
-            getOptionLabel={(option) => option.descripcion || option.nombreMercaderia || ''}
-            value={selectedProduct}
-            onChange={(_, newValue) => setSelectedProduct(newValue)}
-            renderInput={(params) => (
-              <TextField {...params} label="Buscar producto" margin="normal" fullWidth />
-            )}
-          />
-          {selectedProduct && (
-            <>
-              <TextField
-                label="Cantidad"
-                type="number"
-                value={cantidad}
-                onChange={(e) => setCantidad(parseFloat(e.target.value))}
-                fullWidth
-                margin="normal"
-              />
-              <Typography variant="body2" sx={{ mt: 2 }}>
-                Precio unitario: ₲{((selectedProduct.precioUnitario || selectedProduct.precio || 0)).toLocaleString()}
-              </Typography>
-              <Typography variant="body2">
-                Stock disponible: {selectedProduct.stock}
-              </Typography>
-              <Typography variant="h6" sx={{ mt: 1 }}>
-                Total: ₲{((selectedProduct.precioUnitario || selectedProduct.precio || 0) * cantidad).toLocaleString()}
-              </Typography>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenProductDialog(false)}>Cancelar</Button>
-          <Button onClick={handleAgregarProducto} variant="contained" color="primary" disabled={!selectedProduct}>
-            Agregar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Modal de pago */}
+      <PagoModal
+        open={openPagoModal}
+        totalVenta={total}
+        onClose={() => setOpenPagoModal(false)}
+        onConfirm={handleConfirmarPago}
+      />
+
+      {/* Modal de selección de tipo de comprobante */}
+      <TipoComprobanteModal
+        open={openTipoComprobanteModal}
+        onClose={() => setOpenTipoComprobanteModal(false)}
+        onSelectTipo={handleGuardarVenta}
+      />
+
+      {/* Modal de gastos */}
+      <GastoModal
+        open={openGastoModal}
+        onClose={() => setOpenGastoModal(false)}
+        onGastoAgregado={() => {
+          setSuccess('Gasto agregado correctamente');
+        }}
+      />
     </Box>
   );
 };

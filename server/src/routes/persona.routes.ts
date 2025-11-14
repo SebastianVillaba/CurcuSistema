@@ -1,5 +1,5 @@
 import express from 'express';
-import { buscarInfoPersona, buscarPersona, consultarPersonaPorRuc, insertarPersona } from '../controllers/persona.controller';
+import { buscarInfoPersona, buscarPersona, buscarClientePorRuc, agregarClienteRapido, insertarPersona, consultaCliente } from '../controllers/persona.controller';
 
 const router = express.Router();
 
@@ -7,7 +7,9 @@ const router = express.Router();
 // Entonces '/' aquí se traduce a '/api/persona'
 router.post('/', insertarPersona);
 router.get('/consulta', buscarPersona);
+router.get('/consultaCliente', consultaCliente);
 router.get('/info', buscarInfoPersona);
-router.get('/consultaRuc', consultarPersonaPorRuc);
+router.get('/buscarCliente', buscarClientePorRuc);
+router.post('/agregarClienteRapido', agregarClienteRapido);
 
 export default router;

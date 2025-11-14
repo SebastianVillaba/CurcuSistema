@@ -132,13 +132,14 @@ export const productoService = {
    * @param busqueda - Término de búsqueda (código, código de barra o nombre)
    * @returns Lista de productos encontrados con precio y stock
    */
-  consultarPrecioProducto: async (busqueda: string): Promise<any[]> => {
+  consultarPrecioProducto: async (busqueda: string, idTerminalWeb: number): Promise<any[]> => {
     try {
       const response = await axios.get(
         `${API_BASE_URL}/producto/precio`,
         {
           params: {
-            busqueda: busqueda
+            busqueda: busqueda,
+            idTerminalWeb: idTerminalWeb
           }
         }
       );

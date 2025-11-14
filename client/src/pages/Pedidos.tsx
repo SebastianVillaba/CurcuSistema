@@ -1,419 +1,563 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
   TextField,
   Button,
   Typography,
+  Grid,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  IconButton,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Stack,
-  Tabs,
-  Tab,
+  Divider,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
+import PrintIcon from '@mui/icons-material/Print';
+import ReceiptIcon from '@mui/icons-material/Receipt';
 import SearchIcon from '@mui/icons-material/Search';
+import SearchClienteModal from '../components/SearchClienteModal';
+import type { ItemPedido, Cliente, Pedido, FiltroPedidos } from '../types/pedido.types';
 
 const Pedidos: React.FC = () => {
-  const [fecha, setFecha] = useState('04-02-2025');
-  const [tabValue, setTabValue] = useState(0);
-  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  // Estados principales
+  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [cliente, setCliente] = useState<Cliente>({
+    nombre: '',
+    direccion: '',
+    telefono: '',
+    documento: '',
+    dv: '',
+  });
+  const [items, setItems] = useState<ItemPedido[]>([]);
+  const [delivery, setDelivery] = useState('');
+  const [tipoPago, setTipoPago] = useState('');
+  const [nroPedido, setNroPedido] = useState('');
+  
+  // Estados para búsqueda de productos
+  const [terminoBusqueda, setTerminoBusqueda] = useState('');
+  
+  // Estados para lista de pedidos del día
+  const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([]);
+  const [filtros, setFiltros] = useState<FiltroPedidos>({
+    fecha: new Date().toISOString().split('T')[0],
+    cliente: '',
+    tipoCobro: '',
+    estadoCobranza: '',
+  });
 
-  // Datos mock para la tabla de pedidos
-  const pedidosMock = [
-    {
-      fecha: '04-02-2025',
-      nro: '1',
-      pedido: 'HECA CURCUMA',
-      cliente: 'Pendiente',
-      ronda: 'Pendiente',
-      tipo: '',
-      inversion: '04-02-25 15:06',
-      mesa: '',
-      total: '14.000',
-      delivery: ''
-    },
-    {
-      fecha: '04-02-2025',
-      nro: '2',
-      pedido: 'HECA CURCUMA',
-      cliente: 'Pendiente',
-      ronda: 'Pendiente',
-      tipo: '',
-      inversion: '04-02-25 15:06',
-      mesa: '',
-      total: '14.000',
-      delivery: ''
-    },
-    {
-      fecha: '04-02-2025',
-      nro: '3',
-      pedido: 'DOC CHIARA',
-      cliente: 'Pendiente',
-      ronda: 'Pendiente',
-      tipo: '',
-      inversion: '04-02-25 15:06',
-      mesa: '',
-      total: '18.000',
-      delivery: ''
-    },
-    {
-      fecha: '04-02-2025',
-      nro: '4',
-      pedido: 'DAVID GUERRERO',
-      cliente: 'Pendiente',
-      ronda: 'NEGRAL',
-      tipo: '',
-      inversion: '04-02-25 00:00',
-      mesa: '',
-      total: '9.000',
-      delivery: ''
-    },
-    {
-      fecha: '04-02-2025',
-      nro: '5',
-      pedido: 'SALA 13',
-      cliente: 'Pendiente',
-      ronda: 'Pendiente',
-      tipo: '',
-      inversion: '04-02-25 08:05',
-      mesa: '',
-      total: '22.900',
-      delivery: ''
-    },
-    {
-      fecha: '04-02-2025',
-      nro: '6',
-      pedido: 'HAB 222',
-      cliente: 'Pendiente',
-      ronda: 'Pendiente',
-      tipo: '',
-      inversion: '04-02-25 08:05',
-      mesa: '',
-      total: '19.000',
-      delivery: ''
-    },
-    {
-      fecha: '04-02-2025',
-      nro: '7',
-      pedido: 'SALA 13',
-      cliente: 'Pendiente',
-      ronda: 'Pendiente',
-      tipo: '',
-      inversion: '04-02-25 08:05',
-      mesa: '',
-      total: '22.900',
-      delivery: ''
-    },
-    {
-      fecha: '04-02-2025',
-      nro: '1',
-      pedido: 'SABRINA ROJAS',
-      cliente: 'Pendiente',
-      ronda: 'Q GENERAL',
-      tipo: '',
-      inversion: '04-02-24 05:14',
-      mesa: '',
-      total: '23.000',
-      delivery: ''
-    },
-  ];
+  // Modal de búsqueda de cliente
+  const [openClienteModal, setOpenClienteModal] = useState(false);
 
-  // Datos mock para el detalle del pedido seleccionado
-  const detallePedidoMock = [
-    { producto: 'Producto 1', descripcion: 'Descripción del producto 1', cantidad: '2', precio: '7.000', total: '14.000' },
-    { producto: 'Producto 2', descripcion: 'Descripción del producto 2', cantidad: '1', precio: '18.000', total: '18.000' },
-  ];
+  // Calcular totales
+  const calcularTotales = () => {
+    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const descuentoTotal = items.reduce((sum, item) => sum + item.descuento, 0);
+    const total = subtotal - descuentoTotal;
+    return { subtotal, descuentoTotal, total };
+  };
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
+  const totales = calcularTotales();
+
+  // Atajo de teclado Alt+C para abrir modal de cliente
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        setOpenClienteModal(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Handlers
+  const handleNuevo = () => {
+    setNroPedido('');
+    setCliente({
+      nombre: '',
+      direccion: '',
+      telefono: '',
+      documento: '',
+      dv: '',
+    });
+    setItems([]);
+    setDelivery('');
+    setTipoPago('');
+    setTerminoBusqueda('');
+  };
+
+  const handleGuardar = () => {
+    // TODO: Implementar guardado de pedido
+    console.log('Guardar pedido');
+  };
+
+  const handleImprimir = () => {
+    // TODO: Implementar impresión
+    console.log('Imprimir pedido');
+  };
+
+  const handleFacturar = () => {
+    // TODO: Implementar facturación de pedido
+    console.log('Facturar pedido');
+  };
+
+  const handleBuscarProducto = () => {
+    // TODO: Implementar búsqueda de productos
+    console.log('Buscar producto:', terminoBusqueda);
+  };
+
+  const handleEliminarItem = (index: number) => {
+    const nuevosItems = items.filter((_, i) => i !== index);
+    setItems(nuevosItems);
+  };
+
+  const handleBuscarPedidos = () => {
+    // TODO: Implementar búsqueda de pedidos
+    console.log('Buscar pedidos con filtros:', filtros);
+  };
+
+  const handleSeleccionarPedido = (pedido: Pedido) => {
+    // TODO: Cargar pedido seleccionado
+    console.log('Pedido seleccionado:', pedido);
+  };
+
+  // Handler para cuando se selecciona un cliente en el modal
+  const handleClienteSelected = (clienteData: any) => {
+    // Convertir los datos del cliente al formato esperado
+    const nuevoCliente: Cliente = {
+      nombre: clienteData.nombreCliente,
+      direccion: clienteData.direccion || '',
+      telefono: clienteData.celular || '',
+      documento: clienteData.ruc.split('-')[0] || '', // Extraer RUC sin DV
+      dv: clienteData.dv || '',
+    };
+    setCliente(nuevoCliente);
   };
 
   return (
-    <Box sx={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-      {/* Encabezado con Tabs */}
-      <Paper sx={{ mb: 2 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label="Nuevo" />
-          <Tab label="Imprimir" />
-          <Tab label="Guardar" />
-          <Tab label="Entregado" />
-          <Tab label="Facturar" />
-          <Tab label="Facturar vendido" />
-          <Tab label="Facturar Pendiente" />
-          <Tab label="Salida de Cliente" />
-          <Tab label="Imprimir pedidos del dia" />
-          <Tab label="Eventos pedidos sin delivery" />
-        </Tabs>
-      </Paper>
-
-      {/* Sección de búsqueda y filtros */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Box sx={{ minWidth: '120px' }}>
-            <Typography variant="h4" sx={{ color: 'error.main', fontWeight: 'bold' }}>
-              14.000
-            </Typography>
-          </Box>
-          
-          <TextField
-            label="Fecha"
-            size="small"
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: '200px' }}
-          />
-
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ height: '40px', minWidth: '120px' }}
-          >
-            A COBRAR
-          </Button>
-
-          <Button
-            variant="contained"
-            color="secondary"
-            sx={{ height: '40px', minWidth: '120px' }}
-          >
-            LA RENDIDA
-          </Button>
-
-          <FormControl size="small" sx={{ minWidth: '150px' }}>
-            <InputLabel>Pendiente</InputLabel>
-            <Select
-              value="pendiente"
-              label="Pendiente"
-            >
-              <MenuItem value="pendiente">Pendiente</MenuItem>
-              <MenuItem value="entregado">Entregado</MenuItem>
-              <MenuItem value="facturado">Facturado</MenuItem>
-            </Select>
-          </FormControl>
-
-          <Button
-            variant="contained"
-            startIcon={<SearchIcon />}
-            sx={{ height: '40px', minWidth: '120px' }}
-          >
-            Buscar
-          </Button>
-        </Box>
-      </Paper>
-
-      {/* Tabla de pedidos */}
-      <Paper sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <TableContainer sx={{ flexGrow: 1 }}>
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Pedido</TableCell>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Ronda</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Inversión</TableCell>
-                <TableCell>Mesa</TableCell>
-                <TableCell align="right">Total</TableCell>
-                <TableCell>Delivery</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {pedidosMock.map((pedido, index) => (
-                <TableRow 
-                  key={index}
-                  hover
-                  selected={selectedRow === index}
-                  onClick={() => setSelectedRow(index)}
-                  sx={{ 
-                    cursor: 'pointer',
-                    '&.Mui-selected': {
-                      backgroundColor: 'action.selected',
+    <Box sx={{ height: 'calc(100vh - 120px)', p: 2 }}>
+      {/* Botones de Acción */}
+      <Stack direction="row" spacing={1} sx={{ height: '5vh', mb: 2 }} >
+        <Button
+          variant="contained"
+          color="success"
+          startIcon={<AddIcon />}
+          onClick={handleNuevo}
+        >
+          Nuevo
+        </Button>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<PrintIcon />}
+          onClick={handleImprimir}
+        >
+          Imprimir
+        </Button>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<SaveIcon />}
+          onClick={handleGuardar}
+        >
+          Guardar
+        </Button>
+        <Button
+          variant="contained"
+          color="warning"
+          startIcon={<ReceiptIcon />}
+          onClick={handleFacturar}
+        >
+          Facturar Pedido
+        </Button>
+      </Stack>
+      <Grid container spacing={2} sx={{ height: '100%' }}>
+        {/* Lado Izquierdo - Formulario de Pedido */}
+        <Grid size={4}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Búsqueda de Productos */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Productos
+              </Typography>
+              {/* Stack de busqueda de producto */}
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Buscar producto"
+                  value={terminoBusqueda}
+                  onChange={(e) => setTerminoBusqueda(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleBuscarProducto();
                     }
                   }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleBuscarProducto}
+                  startIcon={<SearchIcon />}
                 >
-                  <TableCell>{pedido.fecha}</TableCell>
-                  <TableCell>{pedido.pedido}</TableCell>
-                  <TableCell>{pedido.cliente}</TableCell>
-                  <TableCell>{pedido.ronda}</TableCell>
-                  <TableCell>{pedido.tipo}</TableCell>
-                  <TableCell>{pedido.inversion}</TableCell>
-                  <TableCell>{pedido.mesa}</TableCell>
-                  <TableCell align="right">{pedido.total}</TableCell>
-                  <TableCell>{pedido.delivery}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+                  Buscar
+                </Button>
+              </Stack>
 
-      {/* Panel inferior con detalles del pedido y formulario */}
-      <Box sx={{ display: 'flex', gap: 2, mt: 2, height: '300px' }}>
-        {/* Panel izquierdo - Lista de productos */}
-        <Paper sx={{ flex: 1, p: 2, overflow: 'auto' }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Producto</Typography>
-          <Stack spacing={1}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Descripción"
-              InputProps={{ readOnly: true }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Unidades"
-              InputProps={{ readOnly: true }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Precio"
-              InputProps={{ readOnly: true }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Total"
-              InputProps={{ readOnly: true }}
-            />
-          </Stack>
-        </Paper>
+              {/* Detalle del Producto Seleccionado */}
+              <Paper variant="outlined" sx={{ p: 1, minHeight: 80, bgcolor: '#f5f5f5' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Seleccione un producto para ver los detalles
+                </Typography>
+              </Paper>
+            </Box>
 
-        {/* Panel central - Detalle del pedido */}
-        <Paper sx={{ flex: 2, p: 2, overflow: 'auto' }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Detalle del Pedido</Typography>
-          {selectedRow !== null && (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Producto</TableCell>
-                    <TableCell>Descripción</TableCell>
-                    <TableCell align="right">Cantidad</TableCell>
-                    <TableCell align="right">Precio</TableCell>
-                    <TableCell align="right">Total</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {detallePedidoMock.map((item, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>{item.producto}</TableCell>
-                      <TableCell>{item.descripcion}</TableCell>
-                      <TableCell align="right">{item.cantidad}</TableCell>
-                      <TableCell align="right">₲{item.precio}</TableCell>
-                      <TableCell align="right">₲{item.total}</TableCell>
+            {/* Tabla de Items */}
+            <Box sx={{ flexGrow: 1, overflow: 'auto', mb: 2 }}>
+              <TableContainer>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Descripción</TableCell>
+                      <TableCell align="right">Unidades</TableCell>
+                      <TableCell align="right">Precio</TableCell>
+                      <TableCell align="right">Total</TableCell>
+                      <TableCell align="center">Acciones</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-          {selectedRow === null && (
-            <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-              Seleccione un pedido para ver los detalles
+                  </TableHead>
+                  <TableBody>
+                    {items.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.descripcion}</TableCell>
+                        <TableCell align="right">{item.unidades}</TableCell>
+                        <TableCell align="right">
+                          {item.precioUnitario?.toLocaleString('es-PY')}
+                        </TableCell>
+                        <TableCell align="right">
+                          {item.subtotal.toLocaleString('es-PY')}
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleEliminarItem(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+
+            {/* Formulario del Cliente */}
+            <Box sx={{ mt: 'auto' }}>
+              <Typography variant="h6" gutterBottom>
+                Datos del Cliente
+              </Typography>
+              {/* Formulario del cliente */}
+              <Grid container spacing={2}>
+                <Grid size={6}> {/* Lado izquierdo */}
+                  <Grid container spacing={1}> {/* Grid para el lado izquierdo */}
+                    <Grid size={6}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="RUC"
+                        value={cliente.documento}
+                        onChange={(e) =>
+                          setCliente({ ...cliente, documento: e.target.value })
+                        }
+                      />
+                    </Grid>
+                    <Grid size={4}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="DV"
+                        value={cliente.dv}
+                        onChange={(e) => setCliente({ ...cliente, dv: e.target.value })}
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Nombre"
+                        value={cliente.nombre}
+                        onChange={(e) =>
+                          setCliente({ ...cliente, nombre: e.target.value })
+                        }
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Dirección"
+                        value={cliente.direccion}
+                        onChange={(e) =>
+                          setCliente({ ...cliente, direccion: e.target.value })
+                        }
+                      />
+                    </Grid>
+                    <Grid size={8}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Celular"
+                        value={cliente.telefono}
+                        onChange={(e) =>
+                          setCliente({ ...cliente, telefono: e.target.value })
+                        }
+                      />
+                    </Grid>
+
+                  </Grid>
+                </Grid>
+                <Grid size={6}> {/* Lado derecho */}
+                  <Grid container spacing={1}>
+                    <Grid size={12}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Delivery</InputLabel>
+                        <Select
+                          value={delivery}
+                          label="Delivery"
+                          onChange={(e) => setDelivery(e.target.value)}
+                        >
+                          <MenuItem value="">Seleccione...</MenuItem>
+                          <MenuItem value="SI">Sí</MenuItem>
+                          <MenuItem value="NO">No</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid size={12}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Tipo de Pago</InputLabel>
+                        <Select
+                          value={tipoPago}
+                          label="Tipo de Pago"
+                          onChange={(e) => setTipoPago(e.target.value)}
+                        >
+                          <MenuItem value="">Seleccione...</MenuItem>
+                          <MenuItem value="EFECTIVO">Efectivo</MenuItem>
+                          <MenuItem value="TARJETA">Tarjeta</MenuItem>
+                          <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
+                          <MenuItem value="CREDITO">Crédito</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid size={10}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        type="date"
+                        label="Fecha"
+                        value={fecha}
+                        onChange={(e) => setFecha(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Grid>
+
+              {/* Total */}
+              <Box sx={{ mt: 2, textAlign: 'right' }}>
+                <Typography variant="h5" color="error" sx={{ fontWeight: 'bold' }}>
+                  Total: {totales.total.toLocaleString('es-PY')} Gs.
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Lado Derecho - Lista de Pedidos del Día */}
+        <Grid size={8}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" gutterBottom>
+              Pedidos del Día
             </Typography>
-          )}
-        </Paper>
 
-        {/* Panel derecho - Formulario de cliente */}
-        <Paper sx={{ flex: 1, p: 2, overflow: 'auto' }}>
-          <Stack spacing={2}>
-            <TextField
-              fullWidth
-              label="Nombre"
-              size="small"
-              defaultValue="1"
-            />
-            <TextField
-              fullWidth
-              label="Apellido"
-              size="small"
-              defaultValue="8611"
-            />
-            <TextField
-              fullWidth
-              label="Nombre"
-              size="small"
-              defaultValue="HECA CURCUMA"
-            />
-            <TextField
-              fullWidth
-              label="Dirección"
-              size="small"
-            />
-            <TextField
-              fullWidth
-              label="Teléfono"
-              size="small"
-            />
-            <FormControl fullWidth size="small">
-              <InputLabel>Vendedor</InputLabel>
-              <Select
-                value=""
-                label="Vendedor"
-              >
-                <MenuItem value="">Seleccionar</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>Categoría</InputLabel>
-              <Select
-                value=""
-                label="Categoría"
-              >
-                <MenuItem value="">Seleccionar</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="Fecha"
-              size="small"
-              type="date"
-              value="04-02-2025"
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              label="Dinero Cliente"
-              size="small"
-              type="number"
-            />
-          </Stack>
-        </Paper>
-      </Box>
+            {/* Filtros */}
+            <Box sx={{ mb: 2 }}>
+              <Grid container spacing={1}>
+                <Grid size={2}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="date"
+                    label="Fecha"
+                    value={filtros.fecha}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, fecha: e.target.value })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ mb: 1 }}
+                  />
+                </Grid>
+                <Grid size={4}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Buscar cliente"
+                    value={filtros.cliente}
+                    onChange={(e) =>
+                      setFiltros({ ...filtros, cliente: e.target.value })
+                    }
+                  />
+                </Grid>
+                <Grid size={2}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Tipo de Cobro</InputLabel>
+                    <Select
+                      value={filtros.tipoCobro}
+                      label="Tipo de Cobro"
+                      onChange={(e) =>
+                        setFiltros({ ...filtros, tipoCobro: e.target.value })
+                      }
+                    >
+                      <MenuItem value="">Todos</MenuItem>
+                      <MenuItem value="EFECTIVO">Efectivo</MenuItem>
+                      <MenuItem value="TARJETA">Tarjeta</MenuItem>
+                      <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
+                      <MenuItem value="CREDITO">Crédito</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={2}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Estado de Cobranza</InputLabel>
+                    <Select
+                      value={filtros.estadoCobranza}
+                      label="Estado de Cobranza"
+                      onChange={(e) =>
+                        setFiltros({ ...filtros, estadoCobranza: e.target.value })
+                      }
+                    >
+                      <MenuItem value="">Todos</MenuItem>
+                      <MenuItem value="PENDIENTE">Pendiente</MenuItem>
+                      <MenuItem value="PAGADO">Pagado</MenuItem>
+                      <MenuItem value="PARCIAL">Parcial</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={2}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={handleBuscarPedidos}
+                    startIcon={<SearchIcon />}
+                  >
+                    Buscar
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
 
-      {/* Botones de acción inferiores */}
-      <Paper sx={{ p: 2, mt: 2 }}>
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((num) => (
-            <Button
-              key={num}
-              variant="contained"
-              color="success"
-              sx={{ 
-                minWidth: '60px',
-                height: '50px',
-                fontSize: '1.2rem',
-                fontWeight: 'bold'
-              }}
-            >
-              {num}
-            </Button>
-          ))}
-        </Box>
-      </Paper>
+            <Divider sx={{ mb: 2 }} />
+
+            {/* Lista de Pedidos con Scroll */}
+            <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+              <TableContainer sx={{ maxHeight: '100%' }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
+                        Fecha
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
+                        Pedido
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
+                        Cliente
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
+                        Estado
+                      </TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}
+                      >
+                        Total
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pedidosDelDia.length > 0 ? (
+                      pedidosDelDia.map((pedido, index) => (
+                        <TableRow
+                          key={index}
+                          hover
+                          sx={{ cursor: 'pointer' }}
+                          onClick={() => handleSeleccionarPedido(pedido)}
+                        >
+                          <TableCell>
+                            {new Date(pedido.fecha).toLocaleDateString('es-PY')}
+                          </TableCell>
+                          <TableCell>{pedido.nroPedido}</TableCell>
+                          <TableCell>{pedido.cliente.nombre}</TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 1,
+                                backgroundColor:
+                                  pedido.estadoCobranza === 'PAGADO'
+                                    ? '#4caf50'
+                                    : pedido.estadoCobranza === 'PARCIAL'
+                                    ? '#ff9800'
+                                    : '#f44336',
+                                color: 'white',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {pedido.estadoCobranza}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            {pedido.total.toLocaleString('es-PY')}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          <Typography variant="body2" color="text.secondary">
+                            No hay pedidos para mostrar
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Modal de búsqueda de cliente */}
+      <SearchClienteModal
+        open={openClienteModal}
+        onClose={() => setOpenClienteModal(false)}
+        onClienteSelected={handleClienteSelected}
+      />
     </Box>
   );
 };

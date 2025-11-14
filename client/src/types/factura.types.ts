@@ -14,18 +14,22 @@ export interface Conductor {
 }
 
 export interface ItemFactura {
+  idDetVentaTmp?: number;
   idProducto?: number;
-  codigo?: string;
+  nro?: number;
   nombreMercaderia?: string;
   descripcion?: string;
   origen: string;
   unidades: number;
-  precio?: number;
   precioUnitario?: number;
-  total: number;
   descuento: number;
-  stock: number;
-  nombreImpuesto?: string;
+  subtotal: number;
+  gravada10: number;
+  gravada5: number;
+  exenta: number;
+  iva10: number;
+  iva5: number;
+  ivaTotal: number;
 }
 
 export interface Factura {

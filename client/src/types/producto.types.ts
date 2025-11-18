@@ -8,6 +8,7 @@ export interface Producto {
   costo: number;
   idTipoProducto: number;
   idUsuarioAlta?: number;
+  idStock?: number;
 }
 
 export interface TipoProducto {

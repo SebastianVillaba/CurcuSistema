@@ -1,0 +1,170 @@
+Primero que nada analiza el proyecto y familiarizate para poder utilizar las funciones ya creadas y entender el proyecto, luego:
+
+1-) Crea unos controladores en el backend para que 1 añada los detalles del pedido a la tabla temporal, 2 para guardar el pedido final y 3 consulte los pedidos añadidos en el dia. Este es el primer stored procedure: USE [curcuma]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_guardarPedidoFinal]    Script Date: 11/17/2025 11:28:33 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[sp_guardarPedidoFinal]
+    @idUsuarioAlta INT,
+    @idTerminalWeb INT,
+    @idPedidoExistente INT,      -- Si es 0, crea un nuevo pedido. Si > 0, actualiza el total.
+    @idEstadoCobro INT,
+    @idTipoCobro INT,
+    @idCliente INT,
+    @idDelivery INT,
+    @direccion VARCHAR(60)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @verrno INT, @verrmsg VARCHAR(255);
+    DECLARE @totalCalculado MONEY;
+    DECLARE @idPedidoNuevo INT;
+
+    BEGIN TRAN
+        
+        -- 1. CALCULAR TOTAL DEL DETALLE TEMPORAL
+        SELECT @totalCalculado = SUM(subtotal)
+        FROM dbo.detPedidoTmp 
+        WHERE idTerminalWeb = @idTerminalWeb;
+
+        IF @totalCalculado IS NULL BEGIN SELECT @verrno = 50008, @verrmsg = 'Error: No hay detalle temporal para el pedido.'; GOTO error; END
+
+        -- 2. INSERCIÓN / ACTUALIZACIÓN DE LA CABECERA (dbo.pedido)
+        IF @idPedidoExistente = 0 -- 2a. INSERTAR NUEVO PEDIDO
+        BEGIN
+            -- Generación manual del ID (Asumiendo que dbo.pedido NO es IDENTITY)
+            SELECT @idPedidoNuevo = ISNULL(MAX(idPedido), 0) + 1 FROM dbo.pedido WITH (TABLOCKX);
+
+            INSERT INTO dbo.pedido (
+                idPedido, direccion, idUsuarioAlta, fechaAlta, idEstadoCobro, idTipoCobro, idCliente, idDelivery, totalPedido
+            )
+            VALUES (
+                @idPedidoNuevo, @direccion, @idUsuarioAlta, GETDATE(), @idEstadoCobro, @idTipoCobro, @idCliente, @idDelivery, @totalCalculado
+            );
+            SET @idPedidoExistente = @idPedidoNuevo;
+        END
+        ELSE -- 2b. ACTUALIZAR PEDIDO EXISTENTE
+        BEGIN
+            UPDATE dbo.pedido
+            SET totalPedido = @totalCalculado,
+                direccion = @direccion,
+                idUsuarioMod = @idUsuarioAlta,
+                fechaMod = GETDATE()
+            WHERE idPedido = @idPedidoExistente;
+            
+            -- Limpiar detalles anteriores antes de reinsertar
+            DELETE FROM dbo.detPedido WHERE idPedido = @idPedidoExistente; 
+        END
+        
+        SET @verrno = @@ERROR; IF (@verrno <> 0) GOTO error;
+        
+        -- 3. MIGRACIÓN DEL DETALLE TEMPORAL A FINAL (dbo.detPedido)
+        INSERT INTO dbo.detPedido (
+            idPedido, idProducto, idStock, cantidad, precioUnitario, subtotal -- idStock incluido
+        )
+        SELECT 
+            @idPedidoExistente, idProducto, idStock, cantidad, precioUnitario, subtotal
+        FROM dbo.detPedidoTmp
+        WHERE idTerminalWeb = @idTerminalWeb;
+        
+        SET @verrno = @@ERROR; IF (@verrno <> 0) GOTO error;
+
+        -- 4. LIMPIAR TEMPORAL
+        DELETE FROM dbo.detPedidoTmp WHERE idTerminalWeb = @idTerminalWeb;
+        
+        SET @verrno = @@ERROR; IF (@verrno <> 0) GOTO error;
+        
+    COMMIT TRAN
+    SELECT @idPedidoExistente AS idPedido;
+    RETURN 1;
+
+    error:
+        IF @@TRANCOUNT > 0 BEGIN ROLLBACK TRAN END
+        RAISERROR (@verrmsg, 16, 1);
+        RETURN -1;
+END
+
+Este es el otro: 
+USE [curcuma]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_agregarDetPedidoTmp]    Script Date: 11/17/2025 11:27:55 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[sp_agregarDetPedidoTmp]
+    @idTerminalWeb		INT,
+    @idProducto			INT,              
+    @idStock			INT,
+    @cantidad			NUMERIC(10,4),
+    @precioUnitario		MONEY
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @verrno INT, @verrmsg VARCHAR(255);
+    
+    DECLARE @idDetPedidoTmp INT, @nro NUMERIC(3,0);
+    
+    BEGIN TRAN
+        
+        -- 1. Generar la Clave Única Global
+        SELECT @idDetPedidoTmp = ISNULL(MAX(idDetPedidoTmp), 0) + 1 FROM dbo.detPedidoTmp;
+
+        -- 2. Generar el Nro de Línea consecutivo para la sesión
+        SELECT @nro = ISNULL(MAX(nro) + 1, 1) 
+        FROM dbo.detPedidoTmp 
+        WHERE idTerminalWeb = @idTerminalWeb;
+        
+        -- 3. Insertar el registro, incluyendo idStock
+        INSERT INTO dbo.detPedidoTmp(
+            idDetPedidoTmp, idTerminalWeb, nro, idProducto, idStock, cantidad, precioUnitario, subtotal
+        )
+        VALUES (
+            @idDetPedidoTmp, @idTerminalWeb, @nro, @idProducto, @idStock, @cantidad, @precioUnitario, (@precioUnitario * @cantidad)
+        );
+        
+        SET @verrno = @@ERROR;
+        IF (@verrno <> 0) GOTO error;
+        
+    COMMIT TRAN
+    RETURN 1;
+
+    error:
+        IF @@TRANCOUNT > 0 BEGIN ROLLBACK TRAN END
+        RAISERROR (@verrmsg, 16, 1);
+        RETURN -1;
+END
+
+y este es el ultimo: 
+alter PROCEDURE [dbo].[sp_consultaPedidosDia]
+    @idTerminalWeb INT
+AS
+BEGIN
+    -- Buena práctica: evita que se envíen mensajes de 'filas afectadas'
+    SET NOCOUNT ON;
+
+    select 
+        -- Esto crea un número consecutivo para cada fila, ordenado por fecha
+        ROW_NUMBER() OVER (ORDER BY p.fechaAlta ASC) AS nro, 
+        c.nombreCliente,
+        tp.nombreTipo,
+        p.fechaAlta
+    from 
+        pedido p
+    inner join 
+        v_cliente c ON c.idCliente = p.idCliente
+    inner join 
+        v_tipoCobro tp ON tp.idTipoCobro = p.idTipoCobro
+    where 
+        -- Esta forma de comparar fechas es más eficiente y segura
+        CAST(p.fechaAlta AS DATE) = CAST(GETDATE() AS DATE)
+        -- Si necesitas filtrar por terminal, descomenta la siguiente línea:
+        -- AND p.idTerminalWeb = @idTerminalWeb 
+END
+
+2-) Añade en la barra de busqueda de productos en pedidos la misma funcionalidad que tiene la barra de busqueda de prdouctos en facturación, utilizaran la misma llamada al api y debe abrir el mismo modal y poder añadir los productos pero utilizando el sp que acabaste de crear para añadir el detalle de productos
+
+3- ) añade los sp que creaste al frontend para terminar el modulo de pedidos

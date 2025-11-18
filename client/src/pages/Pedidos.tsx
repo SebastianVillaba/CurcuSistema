@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -27,10 +27,19 @@ import PrintIcon from '@mui/icons-material/Print';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchClienteModal from '../components/SearchClienteModal';
-import type { ItemPedido, Cliente, Pedido, FiltroPedidos } from '../types/pedido.types';
+import SearchProductModal from '../components/SearchProductModal';
+import type { ProductoResultado } from '../components/SearchProductModal';
+import { useTerminal } from '../hooks/useTerminal';
+import { pedidoService } from '../services/pedido.service';
+import { reporteService } from '../services/reporte.service';
+import type { DetallePedido, PedidoDia } from '../services/pedido.service'
+import type { Cliente, FiltroPedidos } from '../types/pedido.types';
+import type { DatosTicketPedido, ItemTicketPedido } from '../types/ticket.types';
+import { ticketService } from '../services/ticket.service';
 
 const Pedidos: React.FC = () => {
   // Estados principales
+  const { idTerminalWeb } = useTerminal();
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [cliente, setCliente] = useState<Cliente>({
     nombre: '',
@@ -39,16 +48,20 @@ const Pedidos: React.FC = () => {
     documento: '',
     dv: '',
   });
-  const [items, setItems] = useState<ItemPedido[]>([]);
+  const [items, setItems] = useState<DetallePedido[]>([]);
   const [delivery, setDelivery] = useState('');
   const [tipoPago, setTipoPago] = useState('');
   const [nroPedido, setNroPedido] = useState('');
   
   // Estados para búsqueda de productos
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
+  const [openProductModal, setOpenProductModal] = useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoResultado | null>(null);
+  const [cantidadSeleccionada, setCantidadSeleccionada] = useState<number>(1);
   
   // Estados para lista de pedidos del día
-  const [pedidosDelDia, setPedidosDelDia] = useState<Pedido[]>([]);
+  const [pedidosDelDia, setPedidosDelDia] = useState<PedidoDia[]>([]);
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoDia | null>(null);
   const [filtros, setFiltros] = useState<FiltroPedidos>({
     fecha: new Date().toISOString().split('T')[0],
     cliente: '',
@@ -59,12 +72,27 @@ const Pedidos: React.FC = () => {
   // Modal de búsqueda de cliente
   const [openClienteModal, setOpenClienteModal] = useState(false);
 
+  const consultarDetalle = useCallback(async () => {
+    if (idTerminalWeb) {
+      try {
+        const data = await pedidoService.consultarDetallePedido(idTerminalWeb);
+        console.log("Estos son los detalles de la consulta de detalle del pedido tmp", data);
+        
+        setItems(data);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }, [idTerminalWeb]);
+
+  useEffect(() => {
+    consultarDetalle();
+  }, [consultarDetalle]);
+
   // Calcular totales
   const calcularTotales = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
-    const descuentoTotal = items.reduce((sum, item) => sum + item.descuento, 0);
-    const total = subtotal - descuentoTotal;
-    return { subtotal, descuentoTotal, total };
+    const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+    return { total };
   };
 
   const totales = calcularTotales();
@@ -96,16 +124,78 @@ const Pedidos: React.FC = () => {
     setDelivery('');
     setTipoPago('');
     setTerminoBusqueda('');
+    setPedidoSeleccionado(null);
+    setProductoSeleccionado(null);
+    setCantidadSeleccionada(1);
   };
 
-  const handleGuardar = () => {
-    // TODO: Implementar guardado de pedido
-    console.log('Guardar pedido');
+  const handleGuardar = async () => {
+    if (!idTerminalWeb || !cliente.idCliente) {
+      alert('Debe seleccionar un cliente y tener una terminal asignada.');
+      return;
+    }
+    const pedido = {
+      idUsuarioAlta: 1, // TODO: get from auth
+      idTerminalWeb,
+      idPedidoExistente: 0, // TODO: handle existing order
+      idEstadoCobro: 1, // TODO: map from tipoPago
+      idTipoCobro: 1, // TODO: map from tipoPago
+      idCliente: cliente.idCliente,
+      idDelivery: delivery === 'SI' ? 1 : 0, // TODO: map from delivery
+      direccion: cliente.direccion || '',
+    };
+    try {
+      await pedidoService.guardarPedido(pedido);
+      alert('Pedido guardado correctamente');
+      handleNuevo();
+      handleBuscarPedidos();
+    } catch (error) {
+      console.error(error);
+      alert('Error al guardar el pedido');
+    }
   };
 
-  const handleImprimir = () => {
-    // TODO: Implementar impresión
-    console.log('Imprimir pedido');
+  const handleImprimir = async () => {
+    if (!pedidoSeleccionado) {
+      alert('Seleccione un pedido del listado para imprimir.');
+      return;
+    }
+
+    try {
+      const reporte = await reporteService.obtenerDatosTicketPedido(
+        pedidoSeleccionado.idPedido,
+        pedidoSeleccionado.nro
+      );
+
+      if (!reporte?.cabecera) {
+        alert('No se encontró información para el pedido seleccionado.');
+        return;
+      }
+
+      const items: ItemTicketPedido[] = (reporte.items || []).map((item: any) => ({
+        cantidad: Number(item.cantidad) || 0,
+        mercaderia: item.mercaderia || '',
+        precio: Number(item.precio) || 0,
+        subtotal: Number(item.subtotal) || 0,
+        codigo: item.codigo || ''
+      }));
+
+      const datosTicket: DatosTicketPedido = {
+        numeroPedido: reporte.cabecera.nro ?? pedidoSeleccionado.nro,
+        cliente: reporte.cabecera.nombreCliente || '',
+        direccion: reporte.cabecera.direccion || '',
+        celular: reporte.cabecera.celular || '',
+        fechaHora: reporte.cabecera.fechaHora || new Date().toISOString(),
+        delivery: reporte.cabecera.nombreDelivery || '',
+        items,
+        total: items.reduce((sum: number, item) => sum + item.subtotal, 0)
+      };
+
+      await ticketService.generarTicketPedido(datosTicket);
+    } catch (error) {
+      console.error('Error al generar ticket del pedido:', error);
+      alert('No se pudo generar el ticket del pedido.');
+    }
   };
 
   const handleFacturar = () => {
@@ -114,33 +204,89 @@ const Pedidos: React.FC = () => {
   };
 
   const handleBuscarProducto = () => {
-    // TODO: Implementar búsqueda de productos
-    console.log('Buscar producto:', terminoBusqueda);
+    setOpenProductModal(true);
   };
 
-  const handleEliminarItem = (index: number) => {
-    const nuevosItems = items.filter((_, i) => i !== index);
-    setItems(nuevosItems);
+  const handleSelectProduct = (producto: ProductoResultado) => {
+    setProductoSeleccionado(producto);
+    setCantidadSeleccionada(1);
   };
 
-  const handleBuscarPedidos = () => {
-    // TODO: Implementar búsqueda de pedidos
-    console.log('Buscar pedidos con filtros:', filtros);
+  const handleAgregarProducto = async () => {
+    if (!idTerminalWeb || !productoSeleccionado) return;
+
+    if (cantidadSeleccionada <= 0) {
+      alert('La cantidad debe ser mayor a cero');
+      return;
+    }
+
+    const data = {
+      idTerminalWeb,
+      idProducto: productoSeleccionado.idProducto,
+      idStock: productoSeleccionado.idStock,
+      cantidad: cantidadSeleccionada,
+      precio: productoSeleccionado.precio,
+    } as const;
+
+    try {
+      await pedidoService.agregarDetallePedido(data);
+      setProductoSeleccionado(null);
+      setCantidadSeleccionada(1);
+      consultarDetalle();
+    } catch (error) {
+      console.error(error);
+      alert('No se pudo agregar el producto al pedido');
+    }
   };
 
-  const handleSeleccionarPedido = (pedido: Pedido) => {
-    // TODO: Cargar pedido seleccionado
-    console.log('Pedido seleccionado:', pedido);
+  const handleEliminarItem = async (idDetPedidoTmp: number) => {
+    if (!idTerminalWeb) {
+      alert('No se puede eliminar sin una terminal asignada.');
+      return;
+    }
+    try {
+      await pedidoService.eliminarDetallePedido(idTerminalWeb, idDetPedidoTmp);
+      consultarDetalle();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleBuscarPedidos = useCallback(async () => {
+    if (idTerminalWeb) {
+      try {
+        const data = await pedidoService.consultarPedidosDia(idTerminalWeb);
+        setPedidosDelDia(data);
+        setPedidoSeleccionado((current) => {
+          if (!current) return null;
+          const stillExists = data.some(
+            (pedido) =>
+              pedido.idPedido === current.idPedido && pedido.nro === current.nro
+          );
+          return stillExists ? current : null;
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }, [idTerminalWeb]);
+
+  useEffect(() => {
+    handleBuscarPedidos();
+  }, [handleBuscarPedidos]);
+
+  const handleSeleccionarPedido = (pedido: PedidoDia) => {
+    setPedidoSeleccionado(pedido);
   };
 
   // Handler para cuando se selecciona un cliente en el modal
   const handleClienteSelected = (clienteData: any) => {
-    // Convertir los datos del cliente al formato esperado
     const nuevoCliente: Cliente = {
+      idCliente: clienteData.idCliente,
       nombre: clienteData.nombreCliente,
       direccion: clienteData.direccion || '',
       telefono: clienteData.celular || '',
-      documento: clienteData.ruc.split('-')[0] || '', // Extraer RUC sin DV
+      documento: clienteData.ruc.split('-')[0] || '',
       dv: clienteData.dv || '',
     };
     setCliente(nuevoCliente);
@@ -163,6 +309,7 @@ const Pedidos: React.FC = () => {
           color="primary"
           startIcon={<PrintIcon />}
           onClick={handleImprimir}
+          disabled={!pedidoSeleccionado}
         >
           Imprimir
         </Button>
@@ -185,7 +332,7 @@ const Pedidos: React.FC = () => {
       </Stack>
       <Grid container spacing={2} sx={{ height: '100%' }}>
         {/* Lado Izquierdo - Formulario de Pedido */}
-        <Grid size={4}>
+        <Grid size={6}>
           <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Búsqueda de Productos */}
             <Box sx={{ mb: 2 }}>
@@ -197,7 +344,7 @@ const Pedidos: React.FC = () => {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Buscar producto"
+                  label="Buscar producto (Alt+P)"
                   value={terminoBusqueda}
                   onChange={(e) => setTerminoBusqueda(e.target.value)}
                   onKeyPress={(e) => {
@@ -216,10 +363,43 @@ const Pedidos: React.FC = () => {
               </Stack>
 
               {/* Detalle del Producto Seleccionado */}
-              <Paper variant="outlined" sx={{ p: 1, minHeight: 80, bgcolor: '#f5f5f5' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Seleccione un producto para ver los detalles
-                </Typography>
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                {productoSeleccionado ? (
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {productoSeleccionado.nombreMercaderia}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Código: {productoSeleccionado.codigo}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Precio: {productoSeleccionado.precio.toLocaleString('es-PY')} Gs.
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <TextField
+                        label="Cantidad"
+                        type="number"
+                        size="small"
+                        value={cantidadSeleccionada}
+                        onChange={(e) => setCantidadSeleccionada(Number(e.target.value) || 0)}
+                        inputProps={{ min: 0.01, step: 1 }}
+                        sx={{ width: 140 }}
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={handleAgregarProducto}
+                      >
+                        Agregar
+                      </Button>
+                    </Stack>
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Seleccione un producto para ver los detalles
+                  </Typography>
+                )}
               </Paper>
             </Box>
 
@@ -229,6 +409,7 @@ const Pedidos: React.FC = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
+                      <TableCell>Nro</TableCell>
                       <TableCell>Descripción</TableCell>
                       <TableCell align="right">Unidades</TableCell>
                       <TableCell align="right">Precio</TableCell>
@@ -237,10 +418,11 @@ const Pedidos: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{item.descripcion}</TableCell>
-                        <TableCell align="right">{item.unidades}</TableCell>
+                    {items.map((item) => (
+                      <TableRow key={item.idDetPedidoTmp}>
+                        <TableCell>{item.nro}</TableCell>
+                        <TableCell>{item.nombreMercaderia}</TableCell>
+                        <TableCell align="right">{item.cantidad}</TableCell>
                         <TableCell align="right">
                           {item.precioUnitario?.toLocaleString('es-PY')}
                         </TableCell>
@@ -251,7 +433,7 @@ const Pedidos: React.FC = () => {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleEliminarItem(index)}
+                            onClick={() => handleEliminarItem(item.idDetPedidoTmp)}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -266,7 +448,7 @@ const Pedidos: React.FC = () => {
             {/* Formulario del Cliente */}
             <Box sx={{ mt: 'auto' }}>
               <Typography variant="h6" gutterBottom>
-                Datos del Cliente
+                Datos del Cliente (Alt+C)
               </Typography>
               {/* Formulario del cliente */}
               <Grid container spacing={2}>
@@ -386,90 +568,11 @@ const Pedidos: React.FC = () => {
         </Grid>
 
         {/* Lado Derecho - Lista de Pedidos del Día */}
-        <Grid size={8}>
+        <Grid size={6}>
           <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" gutterBottom>
               Pedidos del Día
             </Typography>
-
-            {/* Filtros */}
-            <Box sx={{ mb: 2 }}>
-              <Grid container spacing={1}>
-                <Grid size={2}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    type="date"
-                    label="Fecha"
-                    value={filtros.fecha}
-                    onChange={(e) =>
-                      setFiltros({ ...filtros, fecha: e.target.value })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ mb: 1 }}
-                  />
-                </Grid>
-                <Grid size={4}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Buscar cliente"
-                    value={filtros.cliente}
-                    onChange={(e) =>
-                      setFiltros({ ...filtros, cliente: e.target.value })
-                    }
-                  />
-                </Grid>
-                <Grid size={2}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Tipo de Cobro</InputLabel>
-                    <Select
-                      value={filtros.tipoCobro}
-                      label="Tipo de Cobro"
-                      onChange={(e) =>
-                        setFiltros({ ...filtros, tipoCobro: e.target.value })
-                      }
-                    >
-                      <MenuItem value="">Todos</MenuItem>
-                      <MenuItem value="EFECTIVO">Efectivo</MenuItem>
-                      <MenuItem value="TARJETA">Tarjeta</MenuItem>
-                      <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-                      <MenuItem value="CREDITO">Crédito</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={2}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Estado de Cobranza</InputLabel>
-                    <Select
-                      value={filtros.estadoCobranza}
-                      label="Estado de Cobranza"
-                      onChange={(e) =>
-                        setFiltros({ ...filtros, estadoCobranza: e.target.value })
-                      }
-                    >
-                      <MenuItem value="">Todos</MenuItem>
-                      <MenuItem value="PENDIENTE">Pendiente</MenuItem>
-                      <MenuItem value="PAGADO">Pagado</MenuItem>
-                      <MenuItem value="PARCIAL">Parcial</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={2}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={handleBuscarPedidos}
-                    startIcon={<SearchIcon />}
-                  >
-                    Buscar
-                  </Button>
-                </Grid>
-              </Grid>
-            </Box>
-
-            <Divider sx={{ mb: 2 }} />
-
             {/* Lista de Pedidos con Scroll */}
             <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
               <TableContainer sx={{ maxHeight: '100%' }}>
@@ -477,61 +580,43 @@ const Pedidos: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
-                        Fecha
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
-                        Pedido
+                        Nro
                       </TableCell>
                       <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
                         Cliente
                       </TableCell>
                       <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
-                        Estado
+                        Tipo
                       </TableCell>
                       <TableCell
                         align="right"
                         sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}
                       >
-                        Total
+                        Fecha
                       </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {pedidosDelDia.length > 0 ? (
-                      pedidosDelDia.map((pedido, index) => (
+                      pedidosDelDia.map((pedido) => (
                         <TableRow
-                          key={index}
+                          key={`${pedido.idPedido}-${pedido.nro}`}
                           hover
-                          sx={{ cursor: 'pointer' }}
+                          selected={pedidoSeleccionado?.idPedido === pedido.idPedido}
+                          sx={{
+                            cursor: 'pointer',
+                            bgcolor:
+                              pedidoSeleccionado?.idPedido === pedido.idPedido
+                                ? 'action.selected'
+                                : undefined
+                          }}
                           onClick={() => handleSeleccionarPedido(pedido)}
                         >
-                          <TableCell>
-                            {new Date(pedido.fecha).toLocaleDateString('es-PY')}
-                          </TableCell>
-                          <TableCell>{pedido.nroPedido}</TableCell>
-                          <TableCell>{pedido.cliente.nombre}</TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                px: 1,
-                                py: 0.5,
-                                borderRadius: 1,
-                                backgroundColor:
-                                  pedido.estadoCobranza === 'PAGADO'
-                                    ? '#4caf50'
-                                    : pedido.estadoCobranza === 'PARCIAL'
-                                    ? '#ff9800'
-                                    : '#f44336',
-                                color: 'white',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              {pedido.estadoCobranza}
-                            </Typography>
-                          </TableCell>
+                          <TableCell>{pedido.nro}</TableCell>
+                          <TableCell>{pedido.nombreCliente}</TableCell>
+                          <TableCell>{pedido.nombreTipo}</TableCell>
                           <TableCell align="right">
-                            {pedido.total.toLocaleString('es-PY')}
+                            {new Date(pedido.fechaAlta).toLocaleString('es-PY')}
                           </TableCell>
                         </TableRow>
                       ))
@@ -558,6 +643,16 @@ const Pedidos: React.FC = () => {
         onClose={() => setOpenClienteModal(false)}
         onClienteSelected={handleClienteSelected}
       />
+      {/* Modal de búsqueda de producto */}
+      {idTerminalWeb && (
+        <SearchProductModal
+          open={openProductModal}
+          onClose={() => setOpenProductModal(false)}
+          onSelectProduct={handleSelectProduct}
+          idTerminalWeb={idTerminalWeb}
+          busqueda={terminoBusqueda}
+        />
+      )}
     </Box>
   );
 };

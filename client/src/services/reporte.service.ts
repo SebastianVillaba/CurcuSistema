@@ -41,5 +41,20 @@ export const reporteService = {
       console.error('Error al obtener datos de ticket:', error);
       throw new Error(error.response?.data?.message || 'Error al obtener datos de ticket');
     }
+  },
+
+  obtenerDatosTicketPedido: async (idPedido: number, nro: number): Promise<any> => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporte/ticket-pedido`, {
+        params: {
+          idPedido,
+          nro
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error al obtener ticket del pedido:', error);
+      throw new Error(error.response?.data?.message || 'Error al obtener ticket del pedido');
+    }
   }
 };

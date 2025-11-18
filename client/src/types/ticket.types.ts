@@ -15,6 +15,14 @@ export interface ItemTicket {
   subtotal: number;
 }
 
+export interface ItemTicketPedido {
+  cantidad: number;
+  mercaderia: string;
+  precio: number;
+  subtotal: number;
+  codigo?: string | number;
+}
+
 export interface DatosFactura {
   // Datos de la empresa
   nombreFantasia: string;
@@ -82,5 +90,16 @@ export interface DatosTicket {
   
   // Items
   items: ItemTicket[];
+}
+
+export interface DatosTicketPedido {
+  numeroPedido: number | string;
+  cliente: string;
+  direccion: string;
+  celular: string;
+  fechaHora: Date;
+  delivery: string;
+  items: ItemTicketPedido[];
+  total: number;
 }
 

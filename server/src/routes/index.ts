@@ -8,6 +8,7 @@ import ventaRoutes from './venta.routes';
 import terminalRoutes from './terminal.routes'; // Importar rutas de terminal
 import cajaRoutes from './caja.routes'; // Importar rutas de caja
 import reporteRoutes from './reporte.routes'; // Importar rutas de reportes
+import pedidoRoutes from './pedido.routes';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/venta', ventaRoutes);
 router.use('/terminal', terminalRoutes); // Registrar rutas de terminal
 router.use('/caja', cajaRoutes); // Registrar rutas de caja
 router.use('/reporte', reporteRoutes); // Registrar rutas de reportes
+router.use('/pedido', pedidoRoutes);
 
 export default router;

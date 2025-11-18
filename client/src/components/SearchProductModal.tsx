@@ -20,7 +20,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import { productoService } from '../services/producto.service';
 
-interface ProductoResultado {
+export interface ProductoResultado {
   idProducto: number;
   codigo: string;
   nombreMercaderia: string;
@@ -28,6 +28,7 @@ interface ProductoResultado {
   stock: number;
   nombreImpuesto: string;
   origen: string;
+  idStock: number;
 }
 
 interface SearchProductModalProps {
@@ -35,6 +36,7 @@ interface SearchProductModalProps {
   onClose: () => void;
   idTerminalWeb: number;
   onSelectProduct: (producto: ProductoResultado) => void;
+  busqueda?: string;
 }
 
 const SearchProductModal: React.FC<SearchProductModalProps> = ({
@@ -42,14 +44,17 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
   onClose,
   idTerminalWeb,
   onSelectProduct,
+  busqueda,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [productos, setProductos] = useState<ProductoResultado[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
+  const handleSearch = async (term?: string) => {
+    const query = (term ?? searchTerm).trim();
+
+    if (!query) {
       setProductos([]);
       setError('');
       return;
@@ -59,7 +64,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
     setError('');
     
     try {
-      const results = await productoService.consultarPrecioProducto(searchTerm.trim(), idTerminalWeb);
+      const results = await productoService.consultarPrecioProducto(query, idTerminalWeb);
       
       if (results.length === 1) {
         onSelectProduct(results[0]);
@@ -93,11 +98,16 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
   // Reset state when modal opens
   React.useEffect(() => {
     if (open) {
-      setSearchTerm('');
+      const initialTerm = busqueda?.trim() ?? '';
+      setSearchTerm(initialTerm);
       setProductos([]);
       setError('');
+
+      if (initialTerm) {
+        handleSearch(initialTerm);
+      }
     }
-  }, [open]);
+  }, [open, busqueda]);
 
   return (
     <Dialog

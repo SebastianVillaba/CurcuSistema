@@ -1,4 +1,4 @@
-import type { ItemFactura, DatosFactura, ItemTicket, DatosTicket } from "../types/ticket.types";
+import type { ItemFactura, DatosFactura, ItemTicket, DatosTicket, DatosTicketPedido } from "../types/ticket.types";
 import jsPDF from "jspdf";
 
 
@@ -48,6 +48,88 @@ class TicketService {
         // Abrir el PDF en una nueva ventana para imprimir
         doc.autoPrint();
         window.open(doc.output('bloburl'), '_blank');
+    }
+
+    public async generarTicketPedido(datos: DatosTicketPedido): Promise<void> {
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: [this.ANCHO_TICKET, 297]
+        });
+
+        this.posY = 10;
+
+        this.dibujarEncabezadoPedido(doc, datos);
+        this.dibujarTablaPedido(doc, datos);
+        this.dibujarTotalesPedido(doc, datos);
+
+        doc.autoPrint();
+        window.open(doc.output('bloburl'), '_blank');
+    }
+
+    private dibujarEncabezadoPedido(doc: jsPDF, datos: DatosTicketPedido): void {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('Pedido N°', this.MARGEN_IZQ, this.posY);
+        doc.setFontSize(24);
+        doc.text(String(datos.numeroPedido ?? ''), this.ANCHO_TICKET - 25, this.posY + 4, { align: 'center' });
+
+        this.posY += 8;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Cliente: ${datos.cliente || ''}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 4;
+        doc.text(`Dirección: ${datos.direccion || ''}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 4;
+        doc.text(`Celular: ${datos.celular || ''}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 4;
+        doc.text(`Fecha: ${this.formatearFecha(datos.fechaHora)}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 6;
+        this.dibujarLinea(doc);
+    }
+
+    private dibujarTablaPedido(doc: jsPDF, datos: DatosTicketPedido): void {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text('Cantidad', this.MARGEN_IZQ, this.posY);
+        doc.text('Mercaderia', this.MARGEN_IZQ + 18, this.posY);
+        doc.text('Precio', this.MARGEN_IZQ + 48, this.posY);
+        doc.text('Subtotal', this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+        this.posY += 4;
+        this.dibujarLinea(doc);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        datos.items.forEach((item) => {
+            doc.text(String(item.cantidad ?? ''), this.MARGEN_IZQ, this.posY);
+
+            const mercaderiaLineas = this.dividirTexto(item.mercaderia ?? '', 18);
+            doc.text(mercaderiaLineas[0] || '', this.MARGEN_IZQ + 18, this.posY);
+            doc.text(this.formatearNumero(item.precio ?? 0, 0), this.MARGEN_IZQ + 48, this.posY);
+            doc.text(this.formatearNumero(item.subtotal ?? 0, 0), this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+            this.posY += 4;
+
+            if (mercaderiaLineas.length > 1) {
+                mercaderiaLineas.slice(1).forEach((linea) => {
+                    doc.text(linea, this.MARGEN_IZQ + 18, this.posY);
+                    this.posY += 4;
+                });
+            }
+
+            this.posY += 2;
+        });
+        this.dibujarLinea(doc);
+    }
+
+    private dibujarTotalesPedido(doc: jsPDF, datos: DatosTicketPedido): void {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text(`Monto total: ${this.formatearNumero(datos.total ?? 0, 0)}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Delivery: ${datos.delivery || ''}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 6;
     }
 
 

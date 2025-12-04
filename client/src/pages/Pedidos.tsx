@@ -52,13 +52,13 @@ const Pedidos: React.FC = () => {
   const [delivery, setDelivery] = useState('');
   const [tipoPago, setTipoPago] = useState('');
   const [nroPedido, setNroPedido] = useState('');
-  
+
   // Estados para búsqueda de productos
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [openProductModal, setOpenProductModal] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoResultado | null>(null);
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState<number>(1);
-  
+
   // Estados para lista de pedidos del día
   const [pedidosDelDia, setPedidosDelDia] = useState<PedidoDia[]>([]);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoDia | null>(null);
@@ -72,12 +72,11 @@ const Pedidos: React.FC = () => {
   // Modal de búsqueda de cliente
   const [openClienteModal, setOpenClienteModal] = useState(false);
 
+  // Consulta detalle del pedido (Para que se cargue al añadir un producto)
   const consultarDetalle = useCallback(async () => {
     if (idTerminalWeb) {
       try {
         const data = await pedidoService.consultarDetallePedido(idTerminalWeb);
-        console.log("Estos son los detalles de la consulta de detalle del pedido tmp", data);
-        
         setItems(data);
       } catch (error) {
         console.error(error);
@@ -129,7 +128,10 @@ const Pedidos: React.FC = () => {
     setCantidadSeleccionada(1);
   };
 
+
+  // Funcion para guardar el pedido 
   const handleGuardar = async () => {
+    // Pregunto si es que tengo un cliente o una terminal asignados
     if (!idTerminalWeb || !cliente.idCliente) {
       alert('Debe seleccionar un cliente y tener una terminal asignada.');
       return;

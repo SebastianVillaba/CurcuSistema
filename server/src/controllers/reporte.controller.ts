@@ -33,7 +33,7 @@ export const reporteFacturaVenta = async (req: Request, res: Response): Promise<
     // El SP devuelve 2 recordsets:
     // recordset[0] = Cabecera y liquidación
     // recordset[1] = Detalle de items
-    
+
     const recordsets = (result as typeof result & { recordsets?: any[] }).recordsets;
 
     res.status(200).json({
@@ -126,7 +126,7 @@ export const reporteTicketVenta = async (req: Request, res: Response): Promise<v
     // El SP devuelve 2 recordsets:
     // recordset[0] = Cabecera
     // recordset[1] = Detalle de items
-    
+
     const recordsets = (result as typeof result & { recordsets?: any[] }).recordsets;
 
     res.status(200).json({
@@ -140,6 +140,108 @@ export const reporteTicketVenta = async (req: Request, res: Response): Promise<v
     res.status(500).json({
       success: false,
       message: 'Error al generar reporte de ticket',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};
+
+/**
+ * Controller para obtener el reporte de cierre de caja
+ * @param req - Request con el parámetro idMovimientoCaja
+ * @param res - Response con los datos del cierre
+ */
+export const reporteCierreCaja = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idMovimientoCaja } = req.query;
+
+    if (!idMovimientoCaja) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro idMovimientoCaja es requerido'
+      });
+      return;
+    }
+
+    const result = await executeRequest({
+      query: 'sp_reporteCierreCaja',
+      isStoredProcedure: true,
+      inputs: [
+        {
+          name: 'idMovimientoCaja',
+          type: sql.Int,
+          value: parseInt(idMovimientoCaja as string)
+        }
+      ]
+    });
+
+    // El SP devuelve 2 recordsets:
+    // recordset[0] = Resumen general y balance
+    // recordset[1] = Detalle de gastos
+
+    const recordsets = (result as typeof result & { recordsets?: any[] }).recordsets;
+
+    res.status(200).json({
+      success: true,
+      message: 'Reporte de cierre de caja generado exitosamente',
+      resumen: recordsets?.[0]?.[0] ?? null,
+      gastos: recordsets?.[1] ?? []
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de cierre de caja:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al generar reporte de cierre de caja',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};
+
+/**
+ * Controller para obtener el reporte de ticket de remisión
+ * @param req - Request con el parámetro idRemision
+ * @param res - Response con los datos del ticket
+ */
+export const reporteTicketRemision = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idRemision } = req.query;
+
+    if (!idRemision) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro idRemision es requerido'
+      });
+      return;
+    }
+
+    const result = await executeRequest({
+      query: 'sp_reporteTicketRemision',
+      isStoredProcedure: true,
+      inputs: [
+        {
+          name: 'idRemision',
+          type: sql.Int,
+          value: parseInt(idRemision as string)
+        }
+      ]
+    });
+
+    // El SP devuelve 2 recordsets:
+    // recordset[0] = Cabecera
+    // recordset[1] = Detalle de items
+
+    const recordsets = (result as typeof result & { recordsets?: any[] }).recordsets;
+
+    res.status(200).json({
+      success: true,
+      message: 'Reporte de ticket de remisión generado exitosamente',
+      cabecera: recordsets?.[0]?.[0] ?? null,
+      items: recordsets?.[1] ?? []
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de ticket de remisión:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al generar reporte de ticket de remisión',
       error: error instanceof Error ? error.message : 'Error desconocido'
     });
   }

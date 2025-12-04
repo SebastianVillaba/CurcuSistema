@@ -10,13 +10,13 @@ import { selectTerminalInfo, selectIsTerminalValidated } from '../store/terminal
  * @example
  * ```tsx
  * const MyComponent = () => {
- *   const { idTerminalWeb, nombreSucursal, nombreDeposito, token } = useTerminal();
+ *   const { idTerminalWeb, idDepositoRemision, idSucursal } = useTerminal();
  *   
  *   return (
  *     <div>
  *       <p>Terminal ID: {idTerminalWeb}</p>
- *       <p>Sucursal: {nombreSucursal}</p>
- *       <p>Depósito: {nombreDeposito}</p>
+ *       <p>Sucursal ID: {idSucursal}</p>
+ *       <p>Depósito Remisión: {idDepositoRemision}</p>
  *     </div>
  *   );
  * };
@@ -27,8 +27,14 @@ export const useTerminal = () => {
   const isValidated = useAppSelector(selectIsTerminalValidated);
 
   return {
-    ...terminalInfo,
     isValidated,
+    idTerminalWeb: terminalInfo.idTerminalWeb,
+    token: terminalInfo.token,
+    idSucursal: terminalInfo.idSucursal,
+    idFactura: terminalInfo.idFactura,
+    idDepositoVenta: terminalInfo.idDepositoVenta,
+    idDepositoRemision: terminalInfo.idDepositoRemision,
+    idDepositoCompra: terminalInfo.idDepositoCompra,
   };
 };
 

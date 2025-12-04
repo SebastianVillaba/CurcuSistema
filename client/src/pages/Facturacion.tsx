@@ -149,23 +149,9 @@ const Facturacion: React.FC = () => {
     setIsLoadingItems(true);
     try {
       const detalles = await ventaService.consultarDetalleVenta(idTerminalWeb, idUsuario);
+      console.log(detalles);
       
       const itemsFormateados: ItemFactura[] = detalles.map(det => {
-        let iva5 = 0;
-        let iva10 = 0;
-        let gravada5 = 0;
-        let gravada10 = 0;
-        let exenta = 0;
-
-        if (det.nombreImpuesto === 'IVA 10%') {
-          iva10 = det.total / 11;
-          gravada10 = det.total - iva10;
-        } else if (det.nombreImpuesto === 'IVA 5%') {
-          iva5 = det.total / 21;
-          gravada5 = det.total - iva5;
-        } else {
-          exenta = det.total;
-        }
 
         return {
           idDetVentaTmp: det.idDetVentaTmp,
@@ -177,13 +163,13 @@ const Facturacion: React.FC = () => {
           unidades: det.cantidad,
           precioUnitario: det.precioUnitario,
           descuento: det.precioDescuento,
-          subtotal: det.total,
-          gravada10,
-          gravada5,
-          exenta,
-          iva10: iva10 || 0,
-          iva5: iva5 || 0,
-          ivaTotal: (iva5 || 0) + (iva10 || 0),
+          subtotal: det.subtotal,
+          gravada10:det.gravada10,
+          gravada5:det.gravada5,
+          exenta:det.exenta,
+          iva10: det.iva10,
+          iva5: det.iva5,
+          ivaTotal: (det.iva5 || 0) + (det.iva10 || 0),
           precio: det.precioUnitario
         };
       });
@@ -232,7 +218,7 @@ const Facturacion: React.FC = () => {
         idTerminalWeb,
         idUsuario,
         idProducto: producto.idProducto,
-        idStock: producto.idStock || 1, // TODO: Obtener idStock correcto
+        idStock: producto.idStock || 1, 
         cantidad: cantidadProducto,
         precioUnitario: producto.precio,
         precioDescuento: 0

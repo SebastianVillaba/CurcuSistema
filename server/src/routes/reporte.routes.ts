@@ -1,5 +1,5 @@
 import express from 'express';
-import { reporteFacturaVenta, reporteTicketVenta, reporteTicketPedidoDia } from '../controllers/reporte.controller';
+import { reporteFacturaVenta, reporteTicketVenta, reporteTicketPedidoDia, reporteCierreCaja, reporteTicketRemision } from '../controllers/reporte.controller';
 
 const router = express.Router();
 
@@ -9,5 +9,7 @@ router.get('/factura', reporteFacturaVenta);
 // Ruta para obtener el reporte de un ticket
 router.get('/ticket', reporteTicketVenta);
 router.get('/ticket-pedido', reporteTicketPedidoDia);
+router.get('/cierre-caja', reporteCierreCaja);
+router.get('/ticket-remision', reporteTicketRemision);
 
 export default router;

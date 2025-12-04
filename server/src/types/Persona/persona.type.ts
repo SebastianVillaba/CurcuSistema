@@ -1,26 +1,28 @@
 export interface InsertarPersonaRequest {
-  nombre: string;                    
-  ruc?: string;                      
-  dv?: string;                       
-  direccion?: string;                
+  nombre: string;
+  ruc?: string;
+  dv?: string;
+  direccion?: string;
   idCiudad?: string;                 // varchar(30) según el SP
-  pais?: string;                     
-  telefono?: string;                 
-  celular?: string;                  
-  email?: string;                    
-  fechaNacimiento?: string;          
-  idUsuarioAlta: number;             
-  idTipoDocumento?: number;          
-  nombreFantasia?: string;           
-  apellido?: string;                 
+  pais?: string;
+  telefono?: string;
+  celular?: string;
+  email?: string;
+  fechaNacimiento?: string;
+  idUsuarioAlta: number;
+  idTipoDocumento?: number;
+  nombreFantasia?: string;
+  apellido?: string;
   codigo?: number;
-  idGrupoCliente?: number;           
-  tipoPersonaJur: boolean;           
-  tipoProveedor: boolean;            
-  responsableProveedor?: string;     
-  timbrado?: string;                 
-  tipoPersonaFis: boolean;           
-  tipoPersonaCli: boolean;           
+  idGrupoCliente?: number;
+  tipoPersonaJur: boolean;
+  tipoProveedor: boolean;
+  responsableProveedor?: string;
+  timbrado?: string;
+  tipoPersonaFis: boolean;
+  tipoPersonaCli: boolean;
+  tipoFuncionario: boolean;
+  idSector: number | null;
 }
 
 export interface InsertarPersonaResponse {
@@ -46,7 +48,7 @@ export interface PersonaInfoCompleta {
   telefono?: string;
   celular?: string;
   email?: string;
-  
+
   // Campos de ubicación
   idCiudad: number;
   nombreCiudad: string;
@@ -54,19 +56,41 @@ export interface PersonaInfoCompleta {
   nombreDistrito: string;      // Nombre del distrito
   idDepartamento: number;
   nombreDepartamento: string;  // Nombre del departamento
-  
+
   // Campos de personaFis
   apellido?: string;
-  
+
   // Campos de personaJur
   nombreFantasia?: string;
-  
+
   // Campos de proveedor
   responsable?: string;
   timbrado?: string;
-  
+
   // Campos de cliente
   codigo?: number;
   idGrupoCliente?: number;
   nombreGrupoCliente?: string;
+}
+
+export interface ModificarPersonaRequest {
+  idPersona: number;
+  nombre: string;
+  ruc?: string;
+  dv?: string;
+  direccion?: string;
+  idCiudad?: number;
+  pais?: string;
+  telefono?: string;
+  celular?: string;
+  email?: string;
+  fechaNacimiento?: string;
+  idUsuarioMod: number;
+  idTipoDocumento?: number;
+  activo: number;
+  nombreFantasia?: string;
+  apellido?: string;
+  responsableProveedor?: string;
+  timbrado?: string;
+  idSector?: number;
 }

@@ -7,10 +7,13 @@ import {
   Typography,
   Box,
   Stack,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import { useState, useEffect } from 'react';
 import type { Producto, TipoProducto } from '../../types/producto.types';
 import { productoService } from '../../services/producto.service';
+import { impuestoService } from '../../services/impuesto.service';
 
 interface ProductoFormProps {
   formData: Producto;
@@ -20,6 +23,7 @@ interface ProductoFormProps {
 export default function ProductoForm({ formData, setFormData }: ProductoFormProps): JSX.Element {
   const [tiposProducto, setTiposProducto] = useState<TipoProducto[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [impuestos, setImpuestos] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchTiposProducto = async () => {
@@ -34,15 +38,29 @@ export default function ProductoForm({ formData, setFormData }: ProductoFormProp
       }
     };
 
+    const fetchImpuesto = async () => {
+      setLoading(true);
+      try {
+        const tipos = await impuestoService.consultaImpuesto();
+        setImpuestos(tipos);
+      } catch (error) {
+        console.error('Error al cargar tipos de producto:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchTiposProducto();
+    fetchImpuesto();
   }, []);
 
   const handleChange = (field: keyof Producto) => (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any
   ) => {
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     setFormData((prev) => ({
       ...prev,
-      [field]: event.target.value,
+      [field]: value,
     }));
   };
 
@@ -80,20 +98,16 @@ export default function ProductoForm({ formData, setFormData }: ProductoFormProp
             label="Presentación"
             value={formData.presentacion}
             onChange={handleChange('presentacion')}
-            required
             size="small"
-            error={!formData.presentacion}
-            helperText={!formData.presentacion ? 'Campo obligatorio' : ''}
+            helperText={!formData.presentacion }
           />
           <TextField
             fullWidth
             label="Código"
             value={formData.codigo}
             onChange={handleChange('codigo')}
-            required
             size="small"
-            error={!formData.codigo}
-            helperText={!formData.codigo ? 'Campo obligatorio' : ''}
+            helperText={''}
           />
         </Stack>
 
@@ -126,7 +140,6 @@ export default function ProductoForm({ formData, setFormData }: ProductoFormProp
             type="number"
             value={formData.costo}
             onChange={handleChange('costo')}
-            required
             size="small"
             error={formData.costo <= 0}
             helperText={formData.costo <= 0 ? 'Costo debe ser mayor a 0' : ''}
@@ -145,11 +158,40 @@ export default function ProductoForm({ formData, setFormData }: ProductoFormProp
           >
             {tiposProducto.map((tipo) => (
               <MenuItem key={tipo.idTipoProducto} value={tipo.idTipoProducto}>
-                {tipo.nombre}
+                {tipo.nombreTipo}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
+
+        {/* Fila 6: Impuesto */}
+        <FormControl fullWidth size="small">
+          <InputLabel>Impuesto</InputLabel>
+          <Select
+            value={formData.idImpuesto || ''}
+            onChange={handleChange('idImpuesto')}
+            label="Impuesto"
+            disabled={loading}
+          >
+            {impuestos.map((impuesto) => (
+              <MenuItem key={impuesto.idImpuesto} value={impuesto.idImpuesto}>
+                {impuesto.nombreImpuesto}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Fila 7: Gasto */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={formData.gasto || false}
+              onChange={handleChange('gasto')}
+              name="gasto"
+            />
+          }
+          label="Es Gasto"
+        />
       </Stack>
     </Box>
   );

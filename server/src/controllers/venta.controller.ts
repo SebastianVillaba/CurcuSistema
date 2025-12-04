@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { executeRequest, sql } from '../utils/dbHandler';
-import { Request } from 'mssql';
-import { Response } from 'undici-types';
+
 
 /**
  * Controller para agregar un item al detalle de venta temporal (carrito).
@@ -84,7 +83,7 @@ export const consultarDetalleVenta = async (req: Request, res: Response): Promis
       });
       return;
     }
-    
+
     if (!idUsuario) {
       res.status(400).json({
         success: false,
@@ -189,8 +188,8 @@ export const guardarVenta = async (req: Request, res: Response): Promise<void> =
     } = req.body;
 
     // Validar parámetros obligatorios
-    if (!idUsuarioAlta || !idTerminalWeb || !idPersonaJur || !idMovimientoCaja || 
-        !idTipoPago || !idTipoVenta || totalVenta === undefined || ticket === undefined) {
+    if (!idUsuarioAlta || !idTerminalWeb || !idPersonaJur || !idMovimientoCaja ||
+      !idTipoPago || !idTipoVenta || totalVenta === undefined || ticket === undefined) {
       res.status(400).json({
         success: false,
         message: 'Faltan parámetros requeridos para guardar la venta.'
@@ -244,7 +243,7 @@ export const guardarVenta = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export const consultaFacturaCorrelativa = async (req: Request, res: Response): Promise <void> => {
+export const consultaFacturaCorrelativa = async (req: Request, res: Response): Promise<void> => {
   try {
     const { idTerminalWeb } = req.query as any;
 

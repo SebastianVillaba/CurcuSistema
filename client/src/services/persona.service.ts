@@ -37,7 +37,8 @@ interface PersonaInfo {
   telefono?: string;
   celular?: string;
   email?: string;
-  
+  idTipoDocumento?: number;
+
   // Campos de ubicación
   idCiudad: number;
   nombreCiudad: string;
@@ -45,22 +46,26 @@ interface PersonaInfo {
   nombreDistrito: string;      // Nombre del distrito
   idDepartamento: number;
   nombreDepartamento: string;  // Nombre del departamento
-  
+
   // Campos de personaFis
   apellido?: string;
-  
+
   // Campos de personaJur
   nombreFantasia?: string | null;
-  
+
   // Campos de proveedor
   responsable?: string | null;
   timbrado?: string | null;
-  
+
   // Campos de cliente
   idCliente?: number;
   codigo?: number;
   idGrupoCliente?: number;
   nombreGrupoCliente?: string;
+
+  // campos de funcionario
+  idFuncionario?: number;
+  idSector?: number;
 }
 
 /**
@@ -89,6 +94,26 @@ export const personaService = {
   },
 
   /**
+   * Modifica una persona existente
+   * @param persona - Datos de la persona a modificar
+   * @returns Respuesta del servidor
+   */
+  modificarPersona: async (persona: Persona): Promise<InsertarPersonaResponse> => {
+    try {
+      const response = await axios.put<InsertarPersonaResponse>(
+        `${API_BASE_URL}/persona`,
+        persona
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || 'Error al modificar la persona');
+      }
+      throw new Error('Error de conexión con el servidor');
+    }
+  },
+
+  /**
    * Busca personas por término de búsqueda
    * @param searchTerm - Término a buscar
    * @param searchBy - Campo por el cual buscar
@@ -104,7 +129,7 @@ export const personaService = {
         `${API_BASE_URL}/persona/consulta`,
         {
           params: {
-            "tipoBusqueda": searchBy, 
+            "tipoBusqueda": searchBy,
             "busqueda": searchTerm
           }
         }

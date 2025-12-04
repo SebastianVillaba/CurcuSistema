@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+//#region Interfaces
 export interface AgregarDetallePedidoRequest {
     idTerminalWeb: number;
     idProducto: number;
@@ -43,6 +44,7 @@ export interface DetallePedido {
     nombreImpuesto: string;
     nro: number;
 }
+//#region Interfaces
 
 export const pedidoService = {
     agregarDetallePedido: async (data: AgregarDetallePedidoRequest): Promise<any> => {

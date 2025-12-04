@@ -9,9 +9,13 @@ export interface Producto {
   idTipoProducto: number;
   idUsuarioAlta?: number;
   idStock?: number;
+  gasto?: boolean;
+  idImpuesto?: number;
 }
 
 export interface TipoProducto {
   idTipoProducto: number;
-  nombre: string;
+  nombreTipo: string;
+  activo: boolean;
+  habilitarDecimal: boolean;
 }

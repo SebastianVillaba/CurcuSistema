@@ -34,6 +34,8 @@ interface ProductoInfo {
   precio: number;
   costo: number;
   idTipoProducto: number;
+  gasto: boolean;
+  idImpuesto: number;
 }
 
 /**
@@ -56,6 +58,26 @@ export const productoService = {
       // Manejar errores del servidor
       if (error.response?.data) {
         throw new Error(error.response.data.message || 'Error al insertar el producto');
+      }
+      throw new Error('Error de conexión con el servidor');
+    }
+  },
+
+  /**
+   * Modifica un producto existente
+   * @param producto - Datos del producto a modificar
+   * @returns Respuesta del servidor
+   */
+  modificarProducto: async (producto: any): Promise<InsertarProductoResponse> => {
+    try {
+      const response = await axios.put<InsertarProductoResponse>(
+        `${API_BASE_URL}/producto`,
+        producto
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || 'Error al modificar el producto');
       }
       throw new Error('Error de conexión con el servidor');
     }
@@ -118,7 +140,7 @@ export const productoService = {
   obtenerTiposProducto: async (): Promise<TipoProducto[]> => {
     try {
       const response = await axios.get<TipoProducto[]>(
-        `${API_BASE_URL}/tipoProducto`
+        `${API_BASE_URL}/producto/tipoProducto`
       );
       return response.data;
     } catch (error: any) {

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { executeRequest, sql } from "../utils/dbHandler";
-import { BuscarPersonaRequest, InsertarPersonaRequest, InsertarPersonaResponse } from "../types/Persona/persona.type";
+import { BuscarPersonaRequest, InsertarPersonaRequest, InsertarPersonaResponse, ModificarPersonaRequest } from "../types/Persona/persona.type";
 
 /**
  * Controller para insertar una nueva persona en el sistema.
@@ -49,15 +49,17 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       responsableProveedor,
       timbrado,
       tipoPersonaFis,
-      tipoPersonaCli
+      tipoPersonaCli,
+      tipoFuncionario,
+      idSector
     } = req.body as InsertarPersonaRequest;
 
     // PASO 2: Validar campos obligatorios
     // El nombre y el ID del usuario que da de alta son obligatorios
     if (!nombre || !idUsuarioAlta) {
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
-        message: "Los campos 'nombre' e 'idUsuarioAlta' son obligatorios" 
+        message: "Los campos 'nombre' e 'idUsuarioAlta' son obligatorios"
       });
       return;
     }
@@ -65,9 +67,9 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
     // PASO 3: Validar que al menos un tipo de persona esté seleccionado
     // Una persona debe ser al menos Jurídica o Física
     if (!tipoPersonaJur && !tipoPersonaFis) {
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
-        message: "Debe especificar al menos un tipo de persona (Jurídica o Física)" 
+        message: "Debe especificar al menos un tipo de persona (Jurídica o Física)"
       });
       return;
     }
@@ -75,18 +77,26 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
     // PASO 4: Validaciones específicas según el tipo de persona
     // Si es Persona Jurídica, debe tener nombre de fantasía
     if (tipoPersonaJur && !nombreFantasia) {
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
-        message: "Las Personas Jurídicas requieren 'nombreFantasia'" 
+        message: "Las Personas Jurídicas requieren 'nombreFantasia'"
       });
       return;
     }
 
     // Si es Persona Física, debe tener apellido
     if (tipoPersonaFis && !apellido) {
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
-        message: "Las Personas Físicas requieren 'apellido'" 
+        message: "Las Personas Físicas requieren 'apellido'"
+      });
+      return;
+    }
+
+    if (tipoFuncionario && !idSector) {
+      res.status(400).json({
+        success: false,
+        message: "Los Funcionarios requieren 'sector'"
       });
       return;
     }
@@ -114,7 +124,9 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       { name: 'responsableProveedor', type: sql.VarChar, value: responsableProveedor || '' },
       { name: 'timbrado', type: sql.VarChar, value: timbrado || '' },
       { name: 'tipoPersonaFis', type: sql.Bit, value: tipoPersonaFis ? 1 : 0 },
-      { name: 'tipoPersonaCli', type: sql.Bit, value: tipoPersonaCli ? 1 : 0 }
+      { name: 'tipoPersonaCli', type: sql.Bit, value: tipoPersonaCli ? 1 : 0 },
+      { name: 'tipoFuncionario', type: sql.Bit, value: tipoFuncionario ? 1 : 0 },
+      { name: 'idSector', type: sql.Int, value: idSector || 0 }
     ];
 
     // PASO 6: Ejecutar el stored procedure
@@ -133,8 +145,8 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
     // PASO 7: Verificar el resultado y enviar respuesta exitosa
     // rowsAffected indica cuántas filas fueron modificadas en la BD
     const rowsAffected = result.rowsAffected[0];
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       success: true,
       message: "Persona insertada exitosamente",
       rowsAffected: rowsAffected
@@ -143,18 +155,18 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
   } catch (error: any) {
     // PASO 8: Manejo de errores
     console.error("Error en insertarPersona:", error);
-    
+
     // Verificar si es un error personalizado del stored procedure
     // Los errores 50000 y 50001 son errores de validación del SP
     if (error.number === 50000 || error.number === 50001) {
       // Error de validación (RUC duplicado o código duplicado)
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
         message: error.message || "Error de validación en los datos"
       });
     } else {
       // Error genérico del servidor
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Error al insertar la persona en el servidor",
         error: error.message
@@ -225,7 +237,7 @@ export const buscarPersona = async (req: Request, res: Response): Promise<void> 
 export const buscarInfoPersona = async (req: Request, res: Response): Promise<void> => {
   try {
     const { idPersona } = req.query;
-    
+
     // Validar que el parámetro exista
     if (!idPersona) {
       res.status(400).json({
@@ -273,7 +285,7 @@ export const buscarInfoPersona = async (req: Request, res: Response): Promise<vo
 export const buscarClientePorRuc = async (req: Request, res: Response): Promise<void> => {
   try {
     const { ruc, idUsuario } = req.query;
-    
+
     // Validar que los parámetros existan
     if (!ruc) {
       res.status(400).json({
@@ -393,7 +405,7 @@ export const agregarClienteRapido = async (req: Request, res: Response): Promise
 export const consultaCliente = async (req: Request, res: Response): Promise<void> => {
   try {
     const { busqueda } = req.query;
-    
+
     // Validar que el parámetro exista
     if (!busqueda) {
       res.status(400).json({
@@ -429,5 +441,105 @@ export const consultaCliente = async (req: Request, res: Response): Promise<void
       message: 'Error al consultar cliente',
       error: error instanceof Error ? error.message : 'Error desconocido'
     });
+  }
+};
+
+
+/**
+ * Controller para modificar una persona existente.
+ * 
+ * @param req - Objeto Request de Express que contiene los datos en req.body
+ * @param res - Objeto Response de Express para enviar la respuesta HTTP
+ */
+export const modificarPersona = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      idPersona,
+      nombre,
+      ruc,
+      dv,
+      direccion,
+      idCiudad,
+      pais,
+      telefono,
+      celular,
+      email,
+      fechaNacimiento,
+      idUsuarioMod,
+      idTipoDocumento,
+      activo,
+      nombreFantasia,
+      apellido,
+      responsableProveedor,
+      timbrado,
+      idSector
+    } = req.body as ModificarPersonaRequest;
+
+    // Validar campos obligatorios CRÍTICOS
+    if (!idPersona || !nombre || !idUsuarioMod) {
+      res.status(400).json({
+        success: false,
+        message: "Los campos 'idPersona', 'nombre' e 'idUsuarioMod' son obligatorios"
+      });
+      return;
+    }
+
+    const inputs = [
+      { name: 'idPersona', type: sql.Int, value: idPersona },
+      { name: 'nombre', type: sql.VarChar(40), value: nombre },
+      { name: 'ruc', type: sql.VarChar(15), value: ruc || '' },
+      { name: 'dv', type: sql.VarChar(2), value: dv || '' },
+      { name: 'direccion', type: sql.VarChar(50), value: direccion || '' },
+      { name: 'idCiudad', type: sql.Int, value: idCiudad || 0 },
+      { name: 'pais', type: sql.VarChar(25), value: pais || '' },
+      { name: 'telefono', type: sql.VarChar(20), value: telefono || '' },
+      { name: 'celular', type: sql.VarChar(20), value: celular || '' },
+      { name: 'email', type: sql.VarChar(50), value: email || '' },
+      { name: 'fechaNacimiento', type: sql.VarChar(15), value: fechaNacimiento || '' },
+      { name: 'idUsuarioMod', type: sql.Int, value: idUsuarioMod },
+      { name: 'idTipoDocumento', type: sql.Int, value: idTipoDocumento || 0 },
+      { name: 'activo', type: sql.TinyInt, value: activo !== undefined ? activo : 1 },
+      { name: 'nombreFantasia', type: sql.VarChar(50), value: nombreFantasia || null },
+      { name: 'apellido', type: sql.VarChar(40), value: apellido || null },
+      { name: 'responsableProveedor', type: sql.VarChar(30), value: responsableProveedor || null },
+      { name: 'timbrado', type: sql.VarChar(20), value: timbrado || null },
+      { name: 'idSector', type: sql.Int, value: idSector || null }
+    ];
+
+    const result = await executeRequest({
+      query: 'sp_modificarPersona',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    const rowsAffected = result.rowsAffected[0];
+
+    res.status(200).json({
+      success: true,
+      message: "Persona modificada exitosamente",
+      rowsAffected: rowsAffected
+    });
+
+  } catch (error: any) {
+    console.error("Error en modificarPersona:", error);
+
+    // Manejo de errores personalizados del SP
+    if (error.number === 50000) {
+      res.status(400).json({
+        success: false,
+        message: error.message || "El RUC ingresado ya pertenece a otra persona."
+      });
+    } else if (error.number === 50005) {
+      res.status(400).json({
+        success: false,
+        message: error.message || "El Sector seleccionado no existe."
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Error al modificar la persona en el servidor",
+        error: error.message
+      });
+    }
   }
 };

@@ -8,9 +8,12 @@ export interface TerminalState {
   error: string | null;
   terminal: {
     idTerminalWeb: number | null;
-    nombreSucursal: string | null;
-    nombreDeposito: string | null;
     token: string | null;
+    idSucursal: number | null;
+    idFactura: number | null;
+    idDepositoVenta: number | null;
+    idDepositoRemision: number | null;
+    idDepositoCompra: number | null;
   };
 }
 
@@ -20,9 +23,12 @@ const initialState: TerminalState = {
   error: null,
   terminal: {
     idTerminalWeb: null,
-    nombreSucursal: null,
-    nombreDeposito: null,
     token: null,
+    idSucursal: null,
+    idFactura: null,
+    idDepositoVenta: null,
+    idDepositoRemision: null,
+    idDepositoCompra: null,
   },
 };
 
@@ -35,14 +41,20 @@ export const terminalSlice = createSlice({
     },
     setTerminalValidated: (state, action: PayloadAction<{
       idTerminalWeb: number;
-      nombreSucursal: string;
-      nombreDeposito: string;
       token: string;
+      idSucursal?: number;
+      idFactura?: number;
+      idDepositoVenta?: number;
+      idDepositoRemision?: number;
+      idDepositoCompra?: number;
     }>) => {
       state.isValidated = true;
       state.isLoading = false;
       state.error = null;
-      state.terminal = action.payload;
+      state.terminal = {
+        ...state.terminal,
+        ...action.payload
+      };
     },
     setTerminalError: (state, action: PayloadAction<{ error: string; token: string }>) => {
       state.isValidated = false;
@@ -56,9 +68,12 @@ export const terminalSlice = createSlice({
       state.error = null;
       state.terminal = {
         idTerminalWeb: null,
-        nombreSucursal: null,
-        nombreDeposito: null,
         token: null,
+        idSucursal: null,
+        idFactura: null,
+        idDepositoVenta: null,
+        idDepositoRemision: null,
+        idDepositoCompra: null,
       };
     },
   },

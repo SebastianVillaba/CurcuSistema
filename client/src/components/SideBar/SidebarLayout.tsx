@@ -26,8 +26,14 @@ import PeopleIcon from '@mui/icons-material/People';
 import BusinessIcon from '@mui/icons-material/Business';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import PersonalInjuryIcon from '@mui/icons-material/PersonalInjury';
 import Collapse from '@mui/material/Collapse';
 import { useNavigate } from 'react-router-dom';
+import { LocalHospital } from '@mui/icons-material';
 
 const drawerWidth = 240;
 
@@ -103,6 +109,17 @@ interface SidebarLayoutProps {
   children: React.ReactNode;
 }
 
+interface OpenState {
+  compras: boolean;
+  stock: boolean;
+  ventas: boolean;
+  caja: boolean;
+  remisiones: boolean;
+  cobranzas: boolean;
+  pedidoInterno: boolean;
+  sanatorio: boolean;
+}
+
 interface SubMenuItem {
   text: string;
   path: string;
@@ -146,23 +163,72 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   };
 
   const menuItems: MenuItem[] = [
-    { 
-      text: 'Facturación', 
-      path: '/facturacion', 
-      icon: <ReceiptIcon /> 
+    {
+      text: 'Facturación',
+      path: '/facturacion',
+      icon: <ReceiptIcon />
     },
-    { 
-      text: 'Clientes', 
-      path: '/clientes', 
-      icon: <BusinessIcon /> 
+    {
+      text: 'Clientes',
+      path: '/clientes',
+      icon: <BusinessIcon />
     },
-    { 
-      text: 'ABM', 
+    {
+      text: 'ABM',
       icon: <InboxIcon />,
       subItems: [
         { text: 'Persona-Entidad', path: '/abm/personas', icon: <PeopleIcon /> },
         { text: 'Productos', path: '/abm/productos', icon: <InventoryIcon /> },
       ]
+    },
+    {
+      text: 'Cobranzas',
+      icon: <AttachMoneyIcon />,
+      subItems: [
+        { text: 'Precobranza', path: '/cobranzas/precobranza', icon: <ReceiptLongIcon /> },
+        { text: 'Cobranza', path: '/cobranzas/cobranza', icon: <RequestQuoteIcon /> },
+      ]
+    },
+    {
+      text: 'Compras',
+      path: '/compras',
+      icon: <ShoppingCartIcon />
+    },
+    {
+      text: 'Sucursales',
+      icon: <BusinessIcon />, // Reusing BusinessIcon or finding another one like StoreIcon if available, but BusinessIcon is imported.
+      subItems: [
+        { text: 'Remisiones', path: '/remisiones', icon: <ReceiptIcon /> }, // Reusing ReceiptIcon
+        { text: 'Recepciones Pendientes', path: '/recepciones-pendientes', icon: <InventoryIcon /> },
+      ]
+    },
+    {
+      text: 'Pedido Interno',
+      icon: <RequestQuoteIcon />,
+      subItems: [
+        { text: 'Generar Pedido', path: '/pedido-interno/generar', icon: <ReceiptIcon /> },
+        { text: 'Consulta Pedido', path: '/pedido-interno/consulta', icon: <ReceiptLongIcon /> },
+      ]
+    },
+    {
+      text: 'Mercaderia',
+      icon: <InventoryIcon />,
+      subItems: [
+        { text: 'Ajustes', path: '/mercaderia/ajustes', icon: <InventoryIcon /> },
+      ]
+    },
+    {
+      text: 'Sanatorio',
+      icon: <LocalHospital />,
+      subItems: [
+        { text: 'Pacientes', path: '/sanatorio/pacientes', icon: <PersonalInjuryIcon /> },
+        { text: 'Funcionarios', path: '/sanatorio/funcionarios', icon: <PeopleIcon /> },
+      ]
+    },
+    {
+      text: 'Auditoría',
+      path: '/auditoria',
+      icon: <ReceiptLongIcon /> // Using ReceiptLongIcon as a placeholder for Audit log
     },
   ];
 
@@ -235,7 +301,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
                   )}
                 </ListItemButton>
               </ListItem>
-              
+
               {/* Submenú desplegable */}
               {item.subItems && (
                 <Collapse in={openSubMenus[item.text]} timeout="auto" unmountOnExit>

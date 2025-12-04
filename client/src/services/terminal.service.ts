@@ -25,3 +25,13 @@ export const validarTerminal = async (token: string) => {
   const response = await axios.post(`${API_BASE_URL}/terminal/validar`, { terminalToken: token });
   return response.data;
 };
+
+
+export const obtenerTerminalInfo = async (idTerminalWeb: number) => {
+  const response = await axios.get(`${API_BASE_URL}/terminal/info`, {
+    params: {
+      idTerminalWeb: idTerminalWeb
+    }
+  });
+  return response.data;
+};

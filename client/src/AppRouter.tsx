@@ -11,6 +11,17 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PersonasABM from './pages/ABM/PersonasABM';
 import ProductosABM from './pages/ABM/ProductosABM';
 import Pedidos from './pages/Pedidos';
+import Precobranza from './pages/Cobranzas/Precobranza';
+import Cobranza from './pages/Cobranzas/Cobranza';
+import Compras from './pages/Compras/Compras';
+import Remisiones from './pages/Remisiones';
+import RecepcionesPendientes from './pages/RecepcionesPendientes';
+import GenerarPedidoInterno from './pages/PedidoInterno/GenerarPedidoInterno';
+import ConsultaPedidoInterno from './pages/PedidoInterno/ConsultaPedidoInterno';
+import PlanillaPacientes from './pages/Sanatorio/PlanillaPacientes';
+import PlanillaFuncionarios from './pages/Sanatorio/PlanillaFuncionarios';
+import Ajustes from './pages/Mercaderia/Ajustes';
+import Auditoria from './pages/Auditoria/Auditoria';
 
 // Placeholder components for sub-routes
 const ClientesABM = () => <Container><h3>Submenú Clientes (ABM)</h3></Container>;
@@ -26,8 +37,8 @@ const AppRouter: React.FC = () => {
       </Route>
 
       {/* Rutas protegidas */}
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <ProtectedRoute>
             <SidebarLayout>
@@ -38,16 +49,35 @@ const AppRouter: React.FC = () => {
       >
         <Route index element={<h2>Bienvenido al Sistema</h2>} />
         <Route path="abm" element={<ABM />}>
-            <Route path="personas" element={<PersonasABM />} />
-            <Route path="productos" element={<ProductosABM />} />
-            <Route path="clientes" element={<ClientesABM />} />
+          <Route path="personas" element={<PersonasABM />} />
+          <Route path="productos" element={<ProductosABM />} />
+          <Route path="clientes" element={<ClientesABM />} />
         </Route>
         <Route path="clientes" element={<Clientes />}>
-            <Route path="consultas-ventas" element={<ConsultasVentas />} />
-            <Route path="facturacion-clientes" element={<FacturacionClientes />} />
+          <Route path="consultas-ventas" element={<ConsultasVentas />} />
+          <Route path="facturacion-clientes" element={<FacturacionClientes />} />
         </Route>
         <Route path="facturacion" element={<Facturacion />} />
         <Route path="pedidos" element={<Pedidos />} />
+        <Route path="cobranzas">
+          <Route path="precobranza" element={<Precobranza />} />
+          <Route path="cobranza" element={<Cobranza />} />
+        </Route>
+        <Route path="compras" element={<Compras />} />
+        <Route path="remisiones" element={<Remisiones />} />
+        <Route path="recepciones-pendientes" element={<RecepcionesPendientes />} />
+        <Route path="pedido-interno">
+          <Route path="generar" element={<GenerarPedidoInterno />} />
+          <Route path="consulta" element={<ConsultaPedidoInterno />} />
+        </Route>
+        <Route path="mercaderia">
+          <Route path="ajustes" element={<Ajustes />} />
+        </Route>
+        <Route path="sanatorio">
+          <Route path="pacientes" element={<PlanillaPacientes />} />
+          <Route path="funcionarios" element={<PlanillaFuncionarios />} />
+        </Route>
+        <Route path="auditoria" element={<Auditoria />} />
       </Route>
 
       {/* Redirección por defecto al login */}

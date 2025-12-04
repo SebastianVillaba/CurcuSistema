@@ -19,6 +19,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import { productoService } from '../services/producto.service';
+import { comprasService } from '../services/compras.service';
 
 export interface ProductoResultado {
   idProducto: number;
@@ -37,6 +38,7 @@ interface SearchProductModalProps {
   idTerminalWeb: number;
   onSelectProduct: (producto: ProductoResultado) => void;
   busqueda?: string;
+  useComprasSearch?: boolean;
 }
 
 const SearchProductModal: React.FC<SearchProductModalProps> = ({
@@ -45,6 +47,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
   idTerminalWeb,
   onSelectProduct,
   busqueda,
+  useComprasSearch = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [productos, setProductos] = useState<ProductoResultado[]>([]);
@@ -52,7 +55,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
   const [error, setError] = useState('');
 
   const handleSearch = async (term?: string) => {
-    const query = (term ?? searchTerm).trim();
+    const query = term?.trim() ?? searchTerm?.trim();
 
     if (!query) {
       setProductos([]);
@@ -62,10 +65,15 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
 
     setIsSearching(true);
     setError('');
-    
+
     try {
-      const results = await productoService.consultarPrecioProducto(query, idTerminalWeb);
-      
+      let results;
+      if (useComprasSearch) {
+        results = await comprasService.buscarProducto(query);
+      } else {
+        results = await productoService.consultarPrecioProducto(query, idTerminalWeb);
+      }
+
       if (results.length === 1) {
         onSelectProduct(results[0]);
         onClose();
@@ -122,8 +130,8 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
         }
       }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#f5f5f5', 
+      <DialogTitle sx={{
+        backgroundColor: '#f5f5f5',
         borderBottom: '1px solid #ddd',
         display: 'flex',
         justifyContent: 'space-between',
@@ -143,7 +151,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      
+
       <DialogContent sx={{ p: 2 }}>
         {/* Search bar */}
         <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
@@ -187,36 +195,36 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ 
-                    backgroundColor: '#e3f2fd', 
+                  <TableCell sx={{
+                    backgroundColor: '#e3f2fd',
                     fontWeight: 'bold',
                     borderBottom: '2px solid #90caf9'
                   }}>
                     Código
                   </TableCell>
-                  <TableCell sx={{ 
-                    backgroundColor: '#e3f2fd', 
+                  <TableCell sx={{
+                    backgroundColor: '#e3f2fd',
                     fontWeight: 'bold',
                     borderBottom: '2px solid #90caf9'
                   }}>
                     Nombre del Producto
                   </TableCell>
-                  <TableCell sx={{ 
-                    backgroundColor: '#e3f2fd', 
+                  <TableCell sx={{
+                    backgroundColor: '#e3f2fd',
                     fontWeight: 'bold',
                     borderBottom: '2px solid #90caf9'
                   }}>
                     Presentación
                   </TableCell>
-                  <TableCell align="right" sx={{ 
-                    backgroundColor: '#e3f2fd', 
+                  <TableCell align="right" sx={{
+                    backgroundColor: '#e3f2fd',
                     fontWeight: 'bold',
                     borderBottom: '2px solid #90caf9'
                   }}>
                     Precio
                   </TableCell>
-                  <TableCell align="right" sx={{ 
-                    backgroundColor: '#e3f2fd', 
+                  <TableCell align="right" sx={{
+                    backgroundColor: '#e3f2fd',
                     fontWeight: 'bold',
                     borderBottom: '2px solid #90caf9'
                   }}>
@@ -262,7 +270,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography 
+                      <Typography
                         variant="body2"
                         color={producto.stock > 0 ? 'success.main' : 'error.main'}
                         fontWeight="medium"

@@ -38,7 +38,7 @@ export interface Factura {
   fecha: string;
   cliente: Cliente;
   conductor?: Conductor;
-  condicion: 'CONTADO' | 'CENTRAL' | 'CENTRAL';
+  condicion: 'CONTADO' | 'CREDITO';
   tipo: 'Casa 1' | 'Casa 2';
   items: ItemFactura[];
   subtotal: number;

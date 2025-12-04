@@ -221,12 +221,13 @@ export default function PersonaForm({ formData, setFormData }: PersonaFormProps)
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth size="small">
+          <FormControl fullWidth size="small" required>
             <InputLabel>Tipo de documento</InputLabel>
             <Select
               value={formData.idTipoDocumento || ''}
               onChange={handleChange('idTipoDocumento')}
               label="Tipo de documento"
+              required
             >
               {tiposDocumento.map((tipo) => (
                 <MenuItem key={tipo.id} value={tipo.id}>

@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { personaService } from '../../services/persona.service';
+import { sectorService } from '../../services/sector.service';
+import type { Sector } from '../../services/sector.service';
 import {
   Box,
   Paper,
@@ -19,6 +21,8 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  Checkbox,
+  Autocomplete,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -40,9 +44,25 @@ export default function PersonasABM(): JSX.Element {
     tipoProveedor: false,
     tipoPersonaFis: false,
     tipoPersonaCli: false,
+    tipoFuncionario: false,
+    idSector: null,
   });
+  const [sectores, setSectores] = useState<Sector[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    cargarSectores();
+  }, []);
+
+  const cargarSectores = async () => {
+    try {
+      const data = await sectorService.consultaSectoresActivos();
+      setSectores(data || []);
+    } catch (err) {
+      console.error('Error al cargar sectores', err);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -91,6 +111,7 @@ export default function PersonasABM(): JSX.Element {
         telefono: infoCompleta.telefono,
         celular: infoCompleta.celular,
         email: infoCompleta.email,
+        idTipoDocumento: infoCompleta.idTipoDocumento,
         fechaNacimiento: infoCompleta.fechaNacimiento ? new Date(infoCompleta.fechaNacimiento).toISOString().split('T')[0] : '',
         apellido: infoCompleta.apellido,
         nombreFantasia: infoCompleta.nombreFantasia || '',
@@ -102,6 +123,8 @@ export default function PersonasABM(): JSX.Element {
         tipoProveedor: !!infoCompleta.responsable, // Si tiene responsable es Proveedor
         tipoPersonaFis: !!infoCompleta.apellido, // Si tiene apellido es Física
         tipoPersonaCli: !!infoCompleta.codigo, // Si tiene código es Cliente
+        tipoFuncionario: !!infoCompleta.idFuncionario,
+        idSector: infoCompleta.idSector || null,
         idUsuarioAlta: 1, // TODO: Obtener del usuario logueado
       };
       setSelectedPersona(personaMapeada);
@@ -138,6 +161,8 @@ export default function PersonasABM(): JSX.Element {
       timbrado: '',
       tipoPersonaFis: false,
       tipoPersonaCli: false,
+      tipoFuncionario: false,
+      idSector: null,
     });
   };
 
@@ -169,6 +194,11 @@ export default function PersonasABM(): JSX.Element {
       return;
     }
 
+    if (formData.tipoFuncionario && !formData.idSector) {
+      setError('Debe seleccionar un sector para el funcionario');
+      return;
+    }
+
     // 4. Convertir fecha si existe (de YYYY-MM-DD a DD/MM/YYYY para el API)
     let fechaFormateada = '';
     if (formData.fechaNacimiento) {
@@ -181,7 +211,7 @@ export default function PersonasABM(): JSX.Element {
 
     try {
       setLoading(true);
-      
+
       if (isNewMode) {
         // Crear nueva persona
         const dataToSend = {
@@ -191,20 +221,28 @@ export default function PersonasABM(): JSX.Element {
         };
 
         console.log('Enviando datos al API:', dataToSend);
-        
+
         const response = await personaService.insertarPersona(dataToSend);
-        
+
         alert(`✓ ${response.message}`);
-        
+
         // Limpiar formulario y volver al estado inicial
         handleCancel();
-        
+
         // Opcional: Recargar la lista de personas
         // handleSearch();
       } else {
         // Actualizar persona existente
-        // TODO: Implementar endpoint de actualización en el backend
-        alert('Funcionalidad de actualización pendiente de implementar');
+        const dataToSend = {
+          ...formData,
+          fechaNacimiento: fechaFormateada,
+          idUsuarioMod: 1, // TODO: Obtener del usuario logueado
+          activo: true
+        };
+        const response = await personaService.modificarPersona(dataToSend);
+        alert(`✓ ${response.message}`);
+        handleCancel();
+        // handleSearch();
       }
     } catch (err: any) {
       console.error('Error al guardar persona:', err);
@@ -225,6 +263,8 @@ export default function PersonasABM(): JSX.Element {
       tipoProveedor: false,
       tipoPersonaFis: false,
       tipoPersonaCli: false,
+      tipoFuncionario: false,
+      idSector: null,
     });
   };
 
@@ -235,7 +275,7 @@ export default function PersonasABM(): JSX.Element {
         <Typography variant="h6" gutterBottom>
           Búsqueda
         </Typography>
-        
+
         <FormControl component="fieldset" sx={{ mb: 2 }}>
           <FormLabel component="legend">Ordenar</FormLabel>
           <RadioGroup
@@ -308,7 +348,52 @@ export default function PersonasABM(): JSX.Element {
         )}
 
         {(isNewMode || selectedPersona) ? (
-          <PersonaForm formData={formData} setFormData={setFormData} />
+          <Box>
+            <PersonaForm formData={formData} setFormData={setFormData} />
+
+            {/* Funcionario Section - Only visible if Persona Fisica is checked */}
+            {formData.tipoPersonaFis && (
+              <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Datos de Funcionario</Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.tipoFuncionario}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          tipoFuncionario: e.target.checked,
+                          idSector: e.target.checked ? formData.idSector : null
+                        })}
+                      />
+                    }
+                    label="Es Funcionario"
+                  />
+
+                  <Autocomplete
+                    disabled={!formData.tipoFuncionario}
+                    options={sectores}
+                    getOptionLabel={(option) => option.nombreSector}
+                    value={sectores.find(s => s.idSector === formData.idSector) || null}
+                    onChange={(_, newValue) => {
+                      setFormData({
+                        ...formData,
+                        idSector: newValue ? newValue.idSector : null
+                      });
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Sector"
+                        size="small"
+                        sx={{ width: 300 }}
+                      />
+                    )}
+                  />
+                </Box>
+              </Box>
+            )}
+          </Box>
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60%' }}>
             <Typography variant="h6" color="text.secondary">
@@ -316,7 +401,7 @@ export default function PersonasABM(): JSX.Element {
             </Typography>
           </Box>
         )}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 5}}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 5 }}>
           <Button
             variant="contained"
             color="primary"
@@ -325,7 +410,7 @@ export default function PersonasABM(): JSX.Element {
           >
             Nuevo
           </Button>
-          
+
           {(isNewMode || selectedPersona) && (
             <>
               <Button

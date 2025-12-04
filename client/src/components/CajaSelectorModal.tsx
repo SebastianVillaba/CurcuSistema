@@ -24,6 +24,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { Caja, MovimientoCaja } from '../types/caja.types';
 import axios from 'axios';
+import { reporteService } from '../services/reporte.service';
+import { ticketService } from '../services/ticket.service';
 
 interface CajaSelectorModalProps {
   open: boolean;
@@ -62,7 +64,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
       const response = await axios.get(`${API_URL}/caja/consultar`, {
         params: { idUsuario }
       });
-      
+
       if (response.data.success) {
         setCajas(response.data.result);
       }
@@ -78,7 +80,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
       const response = await axios.get(`${API_URL}/caja/movimientos`, {
         params: { idCaja }
       });
-      
+
       if (response.data.success) {
         setMovimientos(prev => ({
           ...prev,
@@ -92,7 +94,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
 
   const handleSelectCaja = async (caja: Caja) => {
     const idCajaActual = localStorage.getItem('idCajaActual');
-    
+
     // Si la caja está abierta (estadoCaja = true), verificar si es mi caja
     if (caja.estadoCaja === true) {
       const esMiCaja = idCajaActual && parseInt(idCajaActual) === caja.idCaja;
@@ -138,12 +140,12 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
           localStorage.setItem('idMovimientoCaja', idMovimientoCaja.toString());
           localStorage.setItem('idCajaActual', selectedCaja.idCaja.toString());
         }
-        
+
         alert('Caja abierta exitosamente');
         await cargarCajas();
         await cargarMovimientos(selectedCaja.idCaja);
         setMontoInicial('');
-        
+
         // Cerrar el modal después de abrir la caja
         onSelectCaja(selectedCaja);
         handleCancel();
@@ -164,7 +166,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
     // Verificar que sea MI caja la que estoy cerrando
     const idMovimientoCaja = localStorage.getItem('idMovimientoCaja');
     const idCajaActual = localStorage.getItem('idCajaActual');
-    
+
     if (!idMovimientoCaja || parseInt(idCajaActual || '0') !== selectedCaja.idCaja) {
       alert('Solo puedes cerrar la caja que tú abriste');
       return;
@@ -184,7 +186,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
         // Limpiar el localStorage después de cerrar la caja
         localStorage.removeItem('idMovimientoCaja');
         localStorage.removeItem('idCajaActual');
-        
+
         alert('Caja cerrada exitosamente');
         await cargarCajas();
         await cargarMovimientos(selectedCaja.idCaja);
@@ -211,9 +213,22 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
     setSelectedMovimiento(idMovimientoCaja);
   };
 
-  const handleImprimirReporte = () => {
-    // TODO: Implementar impresión de reporte
-    alert('Funcionalidad de impresión de reporte en desarrollo');
+
+
+  const handleImprimirReporte = async () => {
+    if (!selectedMovimiento) return;
+
+    setLoadingAction(true);
+    try {
+      const data = await reporteService.obtenerDatosCierreCaja(selectedMovimiento);
+      if (data.success) {
+        ticketService.generarTicketCierreCaja(data);
+      }
+    } catch (error: any) {
+      alert(error.message || 'Error al generar el reporte');
+    } finally {
+      setLoadingAction(false);
+    }
   };
 
   const formatDate = (dateString: string | null) => {
@@ -323,16 +338,16 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                       const idCajaActual = localStorage.getItem('idCajaActual');
                       const esMiCaja = parseInt(idCajaActual || '0') === selectedCaja.idCaja;
                       const mostrarMovimientos = selectedCaja.estadoCaja === false || esMiCaja;
-                      
+
                       return mostrarMovimientos ? (
                         <>
                           <Typography variant="h6" gutterBottom>
                             Movimientos de {selectedCaja.nombreCaja}
                           </Typography>
-                          
+
                           {movimientos[selectedCaja.idCaja] && movimientos[selectedCaja.idCaja].length > 0 ? (
-                            <TableContainer 
-                              sx={{ 
+                            <TableContainer
+                              sx={{
                                 maxHeight: 400,
                                 border: '1px solid #e0e0e0',
                                 borderRadius: 1,
@@ -361,24 +376,24 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                                 <TableBody>
                                   {movimientos[selectedCaja.idCaja].map((mov) => {
                                     const idMovimientoCajaActual = localStorage.getItem('idMovimientoCaja');
-                                    const esMovimientoActual = idMovimientoCajaActual && 
+                                    const esMovimientoActual = idMovimientoCajaActual &&
                                       parseInt(idMovimientoCajaActual) === mov.idMovimientoCaja;
                                     const isSelected = selectedMovimiento === mov.idMovimientoCaja;
-                                    
+
                                     return (
                                       <TableRow
                                         key={mov.idMovimientoCaja}
                                         onClick={() => handleSelectMovimiento(mov.idMovimientoCaja)}
                                         sx={{
                                           cursor: 'pointer',
-                                          backgroundColor: esMovimientoActual 
-                                            ? '#e8f5e9' 
-                                            : isSelected 
-                                            ? '#f5f5f5' 
-                                            : 'transparent',
+                                          backgroundColor: esMovimientoActual
+                                            ? '#e8f5e9'
+                                            : isSelected
+                                              ? '#f5f5f5'
+                                              : 'transparent',
                                           '&:hover': {
-                                            backgroundColor: esMovimientoActual 
-                                              ? '#c8e6c9' 
+                                            backgroundColor: esMovimientoActual
+                                              ? '#c8e6c9'
                                               : '#f0f0f0'
                                           },
                                           transition: 'background-color 0.2s'
@@ -394,8 +409,8 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                                               px: 1,
                                               py: 0.5,
                                               borderRadius: 1,
-                                              backgroundColor: !mov.fechaCierre 
-                                                ? '#4caf50' 
+                                              backgroundColor: !mov.fechaCierre
+                                                ? '#4caf50'
                                                 : '#9e9e9e',
                                               color: 'white',
                                               fontWeight: 'bold'
@@ -428,36 +443,47 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                       const idCajaActual = localStorage.getItem('idCajaActual');
                       const esMiCaja = parseInt(idCajaActual || '0') === selectedCaja.idCaja;
                       const mostrarControles = selectedCaja.estadoCaja === false || esMiCaja;
-                      
+
                       return mostrarControles ? (
                         <Box sx={{ mt: 3, display: 'flex', gap: 2, flexDirection: 'column' }}>
                           {selectedCaja.estadoCaja === false ? (
-                            <>
-                              <TextField
-                                label="Monto Inicial"
-                                type="number"
-                                value={montoInicial}
-                                onChange={(e) => setMontoInicial(e.target.value)}
-                                fullWidth
-                                size="small"
-                              />
+                            selectedMovimiento ? (
                               <Button
                                 variant="contained"
-                                color="success"
-                                onClick={handleAbrirCaja}
-                                disabled={loadingAction || !montoInicial}
+                                color="primary"
+                                onClick={handleImprimirReporte}
                                 fullWidth
                               >
-                                {loadingAction ? <CircularProgress size={24} /> : 'Abrir Caja'}
+                                Imprimir Reporte
                               </Button>
-                            </>
+                            ) : (
+                              <>
+                                <TextField
+                                  label="Monto Inicial"
+                                  type="number"
+                                  value={montoInicial}
+                                  onChange={(e) => setMontoInicial(e.target.value)}
+                                  fullWidth
+                                  size="small"
+                                />
+                                <Button
+                                  variant="contained"
+                                  color="success"
+                                  onClick={handleAbrirCaja}
+                                  disabled={loadingAction || !montoInicial}
+                                  fullWidth
+                                >
+                                  {loadingAction ? <CircularProgress size={24} /> : 'Abrir Caja'}
+                                </Button>
+                              </>
+                            )
                           ) : (() => {
                             // Verificar si el movimiento seleccionado es el actual
                             const idMovimientoCajaActual = localStorage.getItem('idMovimientoCaja');
-                            const movimientoSeleccionado = selectedMovimiento 
+                            const movimientoSeleccionado = selectedMovimiento
                               ? movimientos[selectedCaja.idCaja]?.find(m => m.idMovimientoCaja === selectedMovimiento)
                               : null;
-                            const esMovimientoActual = idMovimientoCajaActual && 
+                            const esMovimientoActual = idMovimientoCajaActual &&
                               movimientoSeleccionado &&
                               parseInt(idMovimientoCajaActual) === movimientoSeleccionado.idMovimientoCaja;
                             const esMovimientoCerrado = movimientoSeleccionado?.fechaCierre !== null;
@@ -486,7 +512,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                                 </>
                               );
                             }
-                            
+
                             // Si hay un movimiento seleccionado y está cerrado, mostrar imprimir reporte
                             if (selectedMovimiento && esMovimientoCerrado) {
                               return (

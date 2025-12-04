@@ -45,6 +45,7 @@ export const reporteService = {
 
   obtenerDatosTicketPedido: async (idPedido: number, nro: number): Promise<any> => {
     try {
+      console.log("Estos son idPediod y nro: ", idPedido, nro);
       const response = await axios.get(`${API_BASE_URL}/reporte/ticket-pedido`, {
         params: {
           idPedido,
@@ -55,6 +56,34 @@ export const reporteService = {
     } catch (error: any) {
       console.error('Error al obtener ticket del pedido:', error);
       throw new Error(error.response?.data?.message || 'Error al obtener ticket del pedido');
+    }
+  },
+
+  obtenerDatosCierreCaja: async (idMovimientoCaja: number): Promise<any> => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporte/cierre-caja`, {
+        params: {
+          idMovimientoCaja
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error al obtener datos de cierre de caja:', error);
+      throw new Error(error.response?.data?.message || 'Error al obtener datos de cierre de caja');
+    }
+  },
+
+  obtenerTicketRemision: async (idRemision: number): Promise<any> => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporte/ticket-remision`, {
+        params: {
+          idRemision
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error al obtener ticket de remisión:', error);
+      throw new Error(error.response?.data?.message || 'Error al obtener ticket de remisión');
     }
   }
 };

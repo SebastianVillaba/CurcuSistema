@@ -23,9 +23,9 @@ export const validarTerminal = async (req: Request, res: Response) => {
 
       logger.info(`Terminal validada: ${terminalConfig.idTerminalWeb} para el token: ${terminalToken}`);
 
-      return res.json({ 
-        success: true, 
-        message: 'Terminal validada correctamente', 
+      return res.json({
+        success: true,
+        message: 'Terminal validada correctamente',
         terminal: {
           idTerminalWeb: terminalConfig.idTerminalWeb,
           nombreSucursal: terminalConfig.nombreSucursal,
@@ -35,8 +35,8 @@ export const validarTerminal = async (req: Request, res: Response) => {
       });
     } else {
       logger.warn(`Token de terminal no válido: ${terminalToken}`);
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'Terminal no encontrada o no válida',
         token: terminalToken
       });
@@ -46,3 +46,30 @@ export const validarTerminal = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: 'Error interno del servidor', error: error.message });
   }
 };
+
+export const obtenerTerminalInfo = async (req: Request, res: Response) => {
+  const { idTerminalWeb } = req.query;
+
+  try {
+    const response = await executeRequest({
+      query: `select * from [dbo].[funObtenerInfoTerminalWeb] (${idTerminalWeb})`
+    })
+
+    if (response.recordset.length > 0) {
+      const terminalConfig = response.recordset[0];
+
+      return res.json({
+        success: true,
+        terminal: terminalConfig
+      });
+    } else {
+      logger.warn(`Error al obtener informacion de la terminal.`);
+      return res.status(404).json({
+        success: false,
+        message: 'Terminal no encontrada o no válida'
+      });
+    }
+  } catch (error) {
+
+  }
+}

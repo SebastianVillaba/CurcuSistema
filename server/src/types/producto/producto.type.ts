@@ -1,12 +1,14 @@
 export interface InsertarProductoRequest {
-  nombre?: string;                    
-  presentacion?: string;                      
-  codigo?: number;                       
+  nombre?: string;
+  presentacion?: string;
+  codigo?: number;
   codigoBarra?: string;
   precio?: number;
   costo?: number;
-  idUsuarioAlta?: number;           
+  idUsuarioAlta?: number;
   idTipoProducto?: number;
+  gasto?: boolean;
+  idImpuesto?: number;
 }
 
 export interface InsertarProductoResponse {
@@ -18,4 +20,19 @@ export interface InsertarProductoResponse {
 export interface BuscarProductoRequest {
   tipoBusqueda: number;
   busqueda: string;
+}
+
+export interface ModificarProductoRequest {
+  idProducto: number;
+  nombre: string;
+  presentacion?: string;
+  codigo?: number;
+  codigoBarra?: string;
+  precio?: number;
+  costo?: number;
+  idUsuarioMod: number;
+  idTipoProducto?: number;
+  gasto?: boolean;
+  activo?: boolean;
+  idImpuesto?: number;
 }

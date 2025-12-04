@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { CircularProgress, Box } from '@mui/material';
 import AppRouter from './AppRouter';
 import './App.css';
-import { obtenerOgenerarToken, validarTerminal } from './services/terminal.service';
+import { obtenerOgenerarToken, validarTerminal, obtenerTerminalInfo } from './services/terminal.service';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { setLoading, setTerminalValidated, setTerminalError, selectIsTerminalValidated, selectTerminalLoading, selectTerminalError, selectTerminalInfo } from './store/terminalSlice';
 import TerminalNotEnabled from './components/TerminalNotEnabled';
@@ -17,21 +17,32 @@ function App() {
   useEffect(() => {
     const inicializarTerminal = async () => {
       dispatch(setLoading(true));
-      
+
       try {
         const token = obtenerOgenerarToken();
         console.log('Token de terminal:', token);
-        
+
         const response = await validarTerminal(token);
         console.log('Respuesta de validación:', response);
-        
+
         if (response.success && response.terminal) {
-          dispatch(setTerminalValidated({
-            idTerminalWeb: response.terminal.idTerminalWeb,
-            nombreSucursal: response.terminal.nombreSucursal,
-            nombreDeposito: response.terminal.nombreDeposito,
-            token: response.terminal.token,
-          }));
+          // Obtener información completa de la terminal
+          const infoResponse = await obtenerTerminalInfo(response.terminal.idTerminalWeb);
+          console.log('Info de terminal:', infoResponse);
+
+          if (infoResponse.success && infoResponse.terminal) {
+            dispatch(setTerminalValidated({
+              idTerminalWeb: response.terminal.idTerminalWeb,
+              token: response.terminal.token,
+              ...infoResponse.terminal // Spread the rest of the info (ids)
+            }));
+          } else {
+            // Fallback if info fetch fails (shouldn't happen if validated)
+            dispatch(setTerminalValidated({
+              idTerminalWeb: response.terminal.idTerminalWeb,
+              token: response.terminal.token,
+            }));
+          }
         }
       } catch (error: any) {
         console.error('Error de validación de terminal:', error);

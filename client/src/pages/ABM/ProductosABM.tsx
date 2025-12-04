@@ -30,7 +30,7 @@ import ProductoForm from '../../components/Producto/ProductoForm';
 export default function ProductosABM(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchBy, setSearchBy] = useState<1 | 2 | 3>(1);
-  const [productos, setProductos] = useState<Producto[]>([]);
+  const [productos, setProductos] = useState<any[]>([]);
   const [selectedProducto, setSelectedProducto] = useState<Producto | null>(null);
   const [isNewMode, setIsNewMode] = useState<boolean>(false);
   const [formData, setFormData] = useState<Producto>({
@@ -42,6 +42,8 @@ export default function ProductosABM(): JSX.Element {
     costo: 0,
     idTipoProducto: 0,
     idUsuarioAlta: 1, // TODO: Obtener del usuario logueado
+    gasto: false,
+    idImpuesto: 0,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -57,7 +59,6 @@ export default function ProductosABM(): JSX.Element {
 
     try {
       const results = await productoService.buscarProductos(searchTerm, searchBy);
-      console.log(results);
       setProductos(results.result);
     } catch (err: any) {
       console.error('Error al buscar productos:', err);
@@ -88,6 +89,8 @@ export default function ProductosABM(): JSX.Element {
         precio: infoCompleta.precio,
         costo: infoCompleta.costo,
         idTipoProducto: infoCompleta.idTipoProducto,
+        gasto: infoCompleta.gasto || false,
+        idImpuesto: infoCompleta.idImpuesto || 0,
       };
 
       setSelectedProducto(productoMapeado);
@@ -114,6 +117,8 @@ export default function ProductosABM(): JSX.Element {
       costo: 0,
       idTipoProducto: 0,
       idUsuarioAlta: 1, // TODO: Obtener del usuario logueado
+      gasto: false,
+      idImpuesto: 0,
     });
   };
 
@@ -125,12 +130,6 @@ export default function ProductosABM(): JSX.Element {
     // 1. Validar nombre obligatorio
     if (!formData.nombre || formData.nombre.trim() === '') {
       setError('El nombre es obligatorio');
-      return;
-    }
-
-    // 3. Validar código obligatorio
-    if (!formData.codigo || formData.codigo.trim() === '') {
-      setError('El código es obligatorio');
       return;
     }
 
@@ -166,8 +165,15 @@ export default function ProductosABM(): JSX.Element {
         // handleSearch();
       } else {
         // Actualizar producto existente
-        // TODO: Implementar endpoint de actualización en el backend
-        alert('Funcionalidad de actualización pendiente de implementar');
+        const dataToSend = {
+          ...formData,
+          idUsuarioMod: 1, // TODO: Obtener del usuario logueado
+          activo: true
+        };
+        const response = await productoService.modificarProducto(dataToSend);
+        alert(`✓ ${response.message}`);
+        handleCancel();
+        // handleSearch();
       }
     } catch (err: any) {
       console.error('Error al guardar producto:', err);
@@ -190,6 +196,8 @@ export default function ProductosABM(): JSX.Element {
       costo: 0,
       idTipoProducto: 0,
       idUsuarioAlta: 1,
+      gasto: false,
+      idImpuesto: 0,
     });
   };
 
@@ -240,7 +248,7 @@ export default function ProductosABM(): JSX.Element {
                   onClick={() => handleSelectProducto(producto)}
                 >
                   <ListItemText
-                    primary={producto.nombre}
+                    primary={producto.nombreMercaderia}
                     secondary={`Código: ${producto.codigo}`}
                   />
                 </ListItemButton>
@@ -281,7 +289,7 @@ export default function ProductosABM(): JSX.Element {
             </Typography>
           </Box>
         )}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 5}}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 5 }}>
           <Button
             variant="contained"
             color="primary"

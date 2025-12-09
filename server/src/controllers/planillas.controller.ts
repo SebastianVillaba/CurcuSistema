@@ -62,28 +62,6 @@ export const eliminarDetPlanillaPacienteTmp = async (req: Request, res: Response
         });
         res.status(200).json({ message: 'Detalle de planilla paciente tmp eliminado exitosamente', result });
     } catch (error: any) {
-        console.error('Error al eliminar detalle de planilla paciente tmp', error);
-        res.status(500).json({ error: 'Error al eliminar detalle de planilla paciente tmp' });
-    }
-}
-
-export const guardarPlanillaPaciente = async (req: Request, res: Response) => {
-    const { idUsuario, idTerminalWeb, fechaPlanilla, idTipoPlanilla } = req.body;
-    try {
-        const result = await executeRequest({
-            query: 'sp_guardarPlanillaPaciente',
-            isStoredProcedure: true,
-            inputs: [
-                { name: 'idUsuarioAlta', type: sql.Int, value: idUsuario },
-                { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
-                { name: 'fechaPlanilla', type: sql.Date, value: fechaPlanilla },
-                { name: 'idTipoPlanillaPac', type: sql.Int, value: idTipoPlanilla }
-            ]
-        });
-        res.status(200).json({ message: 'Planilla paciente guardada exitosamente', result });
-    } catch (error: any) {
-        console.error('Error al guardar planilla paciente', error);
-        res.status(500).json({ error: 'Error al guardar planilla paciente' });
     }
 }
 
@@ -100,6 +78,26 @@ export const obtenerTipoPlanillaPac = async (req: Request, res: Response) => {
     }
 }
 
+export const guardarPlanillaPaciente = async (req: Request, res: Response) => {
+    const { idTerminalWeb, idUsuarioAlta, fechaPlanilla, idTipoPlanillaPac  } = req.body;
+    try {
+        const result = await executeRequest({
+            query: 'sp_guardarPlanillaPaciente',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
+                { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta },
+                { name: 'fechaPlanilla', type: sql.Date, value: fechaPlanilla },
+                { name: 'idTipoPlanillaPac', type: sql.Int, value: idTipoPlanillaPac }
+            ]
+        });
+        res.status(200).json({ message: 'Planilla paciente guardada exitosamente', result });
+    } catch (error: any) {
+        console.error('Error al guardar planilla paciente', error);
+        res.status(500).json({ error: 'Error al guardar planilla paciente' });
+    }
+}
+
 /**
  * * * * * * * * * * * * * * * * * * * * 
  *  ESTA ES LA ZONA DE PLANILLAS DE    *
@@ -109,6 +107,8 @@ export const obtenerTipoPlanillaPac = async (req: Request, res: Response) => {
 
 export const guardarPlanillaFuncionario = async (req: Request, res: Response) => {
     const { idUsuario, idTerminalWeb, fechaPlanilla, idTipoPlanilla } = req.body;
+    console.log(idUsuario, idTerminalWeb, fechaPlanilla, idTipoPlanilla);
+
     try {
         const result = await executeRequest({
             query: 'sp_guardarPlanillaFuncionario',

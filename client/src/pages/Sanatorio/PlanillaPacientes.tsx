@@ -26,6 +26,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useTerminal } from '../../hooks/useTerminal';
 import { planillasService } from '../../services/planillas.service';
 import CheckIcon from '@mui/icons-material/Check';
+import RequirePermission from '../../components/RequirePermission';
 
 const PlanillaPacientes: React.FC = () => {
     const { idTerminalWeb } = useTerminal();
@@ -149,11 +150,12 @@ const PlanillaPacientes: React.FC = () => {
         setLoading(true);
         try {
             await planillasService.guardarPlanillaPaciente({
-                idUsuario: 1, // TODO: Get from context
+                idUsuarioAlta: 1, // TODO: Get from context
                 idTerminalWeb,
                 fechaPlanilla: fecha,
-                idTipoPlanilla
+                idTipoPlanillaPac: idTipoPlanilla
             });
+
             setSuccess('Planilla guardada exitosamente');
             setItems([]);
             limpiarFormulario();
@@ -185,229 +187,231 @@ const PlanillaPacientes: React.FC = () => {
     }, []);
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>
-                Planilla de Pacientes
-            </Typography>
+        <RequirePermission permission="ACCESO_SANATORIO">
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h4" gutterBottom>
+                    Planilla de Pacientes
+                </Typography>
 
-            {/* Header Controls */}
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={3}>
-                        <FormControl fullWidth size="small">
-                            <InputLabel>Tipo Planilla</InputLabel>
-                            <Select
-                                value={idTipoPlanilla}
-                                label="Tipo Planilla"
-                                onChange={(e) => setIdTipoPlanilla(Number(e.target.value))}
+                {/* Header Controls */}
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} md={3}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Tipo Planilla</InputLabel>
+                                <Select
+                                    value={idTipoPlanilla}
+                                    label="Tipo Planilla"
+                                    onChange={(e) => setIdTipoPlanilla(Number(e.target.value))}
+                                >
+                                    {tipoPlanilla.map((tipo) => (
+                                        <MenuItem key={tipo.idTipoPlanillaPac} value={tipo.idTipoPlanillaPac}>
+                                            {tipo.nombreTipoPlanillaPac}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <TextField
+                                fullWidth
+                                type="date"
+                                label="Fecha"
+                                size="small"
+                                value={fecha}
+                                onChange={(e) => setFecha(e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                    </Grid>
+                </Paper>
+
+                {/* Messages */}
+                {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
+                {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
+
+                {/* Input Form */}
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={2}>
+                            <TextField
+                                fullWidth
+                                label="Hab."
+                                size="small"
+                                value={sala}
+                                onChange={(e) => setSala(e.target.value)}
+                                inputRef={salaRef}
+                                onKeyDown={(e) => handleKeyDown(e, ciRef)}
+                            />
+                        </Grid>
+                        <Grid item xs={2}>
+                            <TextField
+                                fullWidth
+                                label="C.I"
+                                size="small"
+                                value={ci}
+                                onChange={(e) => setCi(e.target.value)}
+                                inputRef={ciRef}
+                                onKeyDown={(e) => handleKeyDown(e, nombreRef)}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                fullWidth
+                                label="Nombre y Apellido"
+                                size="small"
+                                value={nombreApellido}
+                                onChange={(e) => setNombreApellido(e.target.value)}
+                                inputRef={nombreRef}
+                                onKeyDown={(e) => handleKeyDown(e, desayunoRef)}
+                            />
+                        </Grid>
+                        <Grid item xs={4} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={desayuno}
+                                        onChange={(e) => setDesayuno(e.target.checked)}
+                                        inputRef={desayunoRef}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                almuerzoRef.current?.focus();
+                                            }
+                                        }}
+                                    />
+                                }
+                                label="D"
+                                labelPlacement="top"
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={almuerzo}
+                                        onChange={(e) => setAlmuerzo(e.target.checked)}
+                                        inputRef={almuerzoRef}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                meriendaRef.current?.focus();
+                                            }
+                                        }}
+                                    />
+                                }
+                                label="A"
+                                labelPlacement="top"
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={merienda}
+                                        onChange={(e) => setMerienda(e.target.checked)}
+                                        inputRef={meriendaRef}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                cenaRef.current?.focus();
+                                            }
+                                        }}
+                                    />
+                                }
+                                label="M"
+                                labelPlacement="top"
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={cena}
+                                        onChange={(e) => setCena(e.target.checked)}
+                                        inputRef={cenaRef}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                agregarRef.current?.focus();
+                                            }
+                                        }}
+                                    />
+                                }
+                                label="C"
+                                labelPlacement="top"
+                            />
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleAgregar}
+                                ref={agregarRef}
+                                sx={{ ml: 1, minWidth: '40px', height: '40px' }}
                             >
-                                {tipoPlanilla.map((tipo) => (
-                                    <MenuItem key={tipo.idTipoPlanillaPac} value={tipo.idTipoPlanillaPac}>
-                                        {tipo.nombreTipoPlanillaPac}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                                <AddIcon />
+                            </Button>
+                        </Grid>
                     </Grid>
-                    <Grid item xs={12} md={3}>
-                        <TextField
-                            fullWidth
-                            type="date"
-                            label="Fecha"
-                            size="small"
-                            value={fecha}
-                            onChange={(e) => setFecha(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
-                        />
-                    </Grid>
-                </Grid>
-            </Paper>
+                </Paper>
 
-            {/* Messages */}
-            {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
-            {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
-
-            {/* Input Form */}
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={2}>
-                        <TextField
-                            fullWidth
-                            label="Hab."
-                            size="small"
-                            value={sala}
-                            onChange={(e) => setSala(e.target.value)}
-                            inputRef={salaRef}
-                            onKeyDown={(e) => handleKeyDown(e, ciRef)}
-                        />
-                    </Grid>
-                    <Grid item xs={2}>
-                        <TextField
-                            fullWidth
-                            label="C.I"
-                            size="small"
-                            value={ci}
-                            onChange={(e) => setCi(e.target.value)}
-                            inputRef={ciRef}
-                            onKeyDown={(e) => handleKeyDown(e, nombreRef)}
-                        />
-                    </Grid>
-                    <Grid item xs={4}>
-                        <TextField
-                            fullWidth
-                            label="Nombre y Apellido"
-                            size="small"
-                            value={nombreApellido}
-                            onChange={(e) => setNombreApellido(e.target.value)}
-                            inputRef={nombreRef}
-                            onKeyDown={(e) => handleKeyDown(e, desayunoRef)}
-                        />
-                    </Grid>
-                    <Grid item xs={4} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={desayuno}
-                                    onChange={(e) => setDesayuno(e.target.checked)}
-                                    inputRef={desayunoRef}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            almuerzoRef.current?.focus();
-                                        }
-                                    }}
-                                />
-                            }
-                            label="D"
-                            labelPlacement="top"
-                        />
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={almuerzo}
-                                    onChange={(e) => setAlmuerzo(e.target.checked)}
-                                    inputRef={almuerzoRef}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            meriendaRef.current?.focus();
-                                        }
-                                    }}
-                                />
-                            }
-                            label="A"
-                            labelPlacement="top"
-                        />
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={merienda}
-                                    onChange={(e) => setMerienda(e.target.checked)}
-                                    inputRef={meriendaRef}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            cenaRef.current?.focus();
-                                        }
-                                    }}
-                                />
-                            }
-                            label="M"
-                            labelPlacement="top"
-                        />
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={cena}
-                                    onChange={(e) => setCena(e.target.checked)}
-                                    inputRef={cenaRef}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            agregarRef.current?.focus();
-                                        }
-                                    }}
-                                />
-                            }
-                            label="C"
-                            labelPlacement="top"
-                        />
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleAgregar}
-                            ref={agregarRef}
-                            sx={{ ml: 1, minWidth: '40px', height: '40px' }}
-                        >
-                            <AddIcon />
-                        </Button>
-                    </Grid>
-                </Grid>
-            </Paper>
-
-            {/* Table */}
-            <TableContainer component={Paper} sx={{ mb: 2, maxHeight: '400px' }}>
-                <Table stickyHeader size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Nro</TableCell>
-                            <TableCell>Hab</TableCell>
-                            <TableCell>Cedula</TableCell>
-                            <TableCell>Nombre y Apellido</TableCell>
-                            <TableCell align="center">Desayuno</TableCell>
-                            <TableCell align="center">Almuerzo</TableCell>
-                            <TableCell align="center">Merienda</TableCell>
-                            <TableCell align="center">Cena</TableCell>
-                            <TableCell align="center">Acciones</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {items.map((item, index) => (
-                            <TableRow key={index}>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell>{item.sala}</TableCell>
-                                <TableCell>{item.ci}</TableCell>
-                                <TableCell>{item.nombreApellido}</TableCell>
-                                <TableCell align="center">{item.desayuno ? <CheckIcon /> : ''}</TableCell>
-                                <TableCell align="center">{item.almuerzo ? <CheckIcon /> : ''}</TableCell>
-                                <TableCell align="center">{item.merienda ? <CheckIcon /> : ''}</TableCell>
-                                <TableCell align="center">{item.cena ? <CheckIcon /> : ''}</TableCell>
-                                <TableCell align="center">
-                                    <Button
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleEliminar(item.idDetPlanillaPacTmp)}
-                                    >
-                                        <DeleteIcon fontSize="small" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {items.length === 0 && (
+                {/* Table */}
+                <TableContainer component={Paper} sx={{ mb: 2, maxHeight: '400px' }}>
+                    <Table stickyHeader size="small">
+                        <TableHead>
                             <TableRow>
-                                <TableCell colSpan={9} align="center">
-                                    No hay pacientes agregados
-                                </TableCell>
+                                <TableCell>Nro</TableCell>
+                                <TableCell>Hab</TableCell>
+                                <TableCell>Cedula</TableCell>
+                                <TableCell>Nombre y Apellido</TableCell>
+                                <TableCell align="center">Desayuno</TableCell>
+                                <TableCell align="center">Almuerzo</TableCell>
+                                <TableCell align="center">Merienda</TableCell>
+                                <TableCell align="center">Cena</TableCell>
+                                <TableCell align="center">Acciones</TableCell>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                            {items.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>{item.sala}</TableCell>
+                                    <TableCell>{item.ci}</TableCell>
+                                    <TableCell>{item.nombreApellido}</TableCell>
+                                    <TableCell align="center">{item.desayuno ? <CheckIcon /> : ''}</TableCell>
+                                    <TableCell align="center">{item.almuerzo ? <CheckIcon /> : ''}</TableCell>
+                                    <TableCell align="center">{item.merienda ? <CheckIcon /> : ''}</TableCell>
+                                    <TableCell align="center">{item.cena ? <CheckIcon /> : ''}</TableCell>
+                                    <TableCell align="center">
+                                        <Button
+                                            size="small"
+                                            color="error"
+                                            onClick={() => handleEliminar(item.idDetPlanillaPacTmp)}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {items.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={9} align="center">
+                                        No hay pacientes agregados
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
 
-            {/* Footer Actions */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    startIcon={<SaveIcon />}
-                    onClick={handleGuardar}
-                    disabled={loading || items.length === 0}
-                >
-                    Guardar Planilla
-                </Button>
+                {/* Footer Actions */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        size="large"
+                        startIcon={<SaveIcon />}
+                        onClick={handleGuardar}
+                        disabled={loading || items.length === 0}
+                    >
+                        Guardar Planilla
+                    </Button>
+                </Box>
             </Box>
-        </Box>
+        </RequirePermission>
     );
 };
 

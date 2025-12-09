@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { 
-  obtenerDepartamentos, 
-  obtenerDistritosPorDepartamento, 
-  obtenerCiudadesPorDistrito 
+import {
+  obtenerDepartamentos,
+  obtenerDistritosPorDepartamento,
+  obtenerCiudadesPorDistrito,
 } from '../controllers/ubicacion.controller';
 
 const router = Router();
@@ -27,5 +27,6 @@ router.get('/distritos', obtenerDistritosPorDepartamento);
  * @access  Public
  */
 router.get('/ciudades', obtenerCiudadesPorDistrito);
+
 
 export default router;

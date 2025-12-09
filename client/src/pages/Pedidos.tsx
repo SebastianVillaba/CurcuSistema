@@ -36,6 +36,7 @@ import type { DetallePedido, PedidoDia } from '../services/pedido.service'
 import type { Cliente, FiltroPedidos } from '../types/pedido.types';
 import type { DatosTicketPedido, ItemTicketPedido } from '../types/ticket.types';
 import { ticketService } from '../services/ticket.service';
+import RequirePermission from '../components/RequirePermission';
 
 const Pedidos: React.FC = () => {
   // Estados principales
@@ -295,367 +296,369 @@ const Pedidos: React.FC = () => {
   };
 
   return (
-    <Box sx={{ height: 'calc(100vh - 120px)', p: 2 }}>
-      {/* Botones de Acción */}
-      <Stack direction="row" spacing={1} sx={{ height: '5vh', mb: 2 }} >
-        <Button
-          variant="contained"
-          color="success"
-          startIcon={<AddIcon />}
-          onClick={handleNuevo}
-        >
-          Nuevo
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<PrintIcon />}
-          onClick={handleImprimir}
-          disabled={!pedidoSeleccionado}
-        >
-          Imprimir
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<SaveIcon />}
-          onClick={handleGuardar}
-        >
-          Guardar
-        </Button>
-        <Button
-          variant="contained"
-          color="warning"
-          startIcon={<ReceiptIcon />}
-          onClick={handleFacturar}
-        >
-          Facturar Pedido
-        </Button>
-      </Stack>
-      <Grid container spacing={2} sx={{ height: '100%' }}>
-        {/* Lado Izquierdo - Formulario de Pedido */}
-        <Grid size={6}>
-          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Búsqueda de Productos */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Productos
-              </Typography>
-              {/* Stack de busqueda de producto */}
-              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Buscar producto (Alt+P)"
-                  value={terminoBusqueda}
-                  onChange={(e) => setTerminoBusqueda(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleBuscarProducto();
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleBuscarProducto}
-                  startIcon={<SearchIcon />}
-                >
-                  Buscar
-                </Button>
-              </Stack>
-
-              {/* Detalle del Producto Seleccionado */}
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                {productoSeleccionado ? (
-                  <Stack spacing={1}>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {productoSeleccionado.nombreMercaderia}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Código: {productoSeleccionado.codigo}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Precio: {productoSeleccionado.precio.toLocaleString('es-PY')} Gs.
-                    </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <TextField
-                        label="Cantidad"
-                        type="number"
-                        size="small"
-                        value={cantidadSeleccionada}
-                        onChange={(e) => setCantidadSeleccionada(Number(e.target.value) || 0)}
-                        inputProps={{ min: 0.01, step: 1 }}
-                        sx={{ width: 140 }}
-                      />
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<AddIcon />}
-                        onClick={handleAgregarProducto}
-                      >
-                        Agregar
-                      </Button>
-                    </Stack>
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Seleccione un producto para ver los detalles
-                  </Typography>
-                )}
-              </Paper>
-            </Box>
-
-            {/* Tabla de Items */}
-            <Box sx={{ flexGrow: 1, overflow: 'auto', mb: 2 }}>
-              <TableContainer>
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Nro</TableCell>
-                      <TableCell>Descripción</TableCell>
-                      <TableCell align="right">Unidades</TableCell>
-                      <TableCell align="right">Precio</TableCell>
-                      <TableCell align="right">Total</TableCell>
-                      <TableCell align="center">Acciones</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {items.map((item) => (
-                      <TableRow key={item.idDetPedidoTmp}>
-                        <TableCell>{item.nro}</TableCell>
-                        <TableCell>{item.nombreMercaderia}</TableCell>
-                        <TableCell align="right">{item.cantidad}</TableCell>
-                        <TableCell align="right">
-                          {item.precioUnitario?.toLocaleString('es-PY')}
-                        </TableCell>
-                        <TableCell align="right">
-                          {item.subtotal.toLocaleString('es-PY')}
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleEliminarItem(item.idDetPedidoTmp)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-
-            {/* Formulario del Cliente */}
-            <Box sx={{ mt: 'auto' }}>
-              <Typography variant="h6" gutterBottom>
-                Datos del Cliente (Alt+C)
-              </Typography>
-              {/* Formulario del cliente */}
-              <Grid container spacing={2}>
-                <Grid size={6}> {/* Lado izquierdo */}
-                  <Grid container spacing={1}> {/* Grid para el lado izquierdo */}
-                    <Grid size={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="RUC"
-                        value={cliente.documento}
-                        onChange={(e) =>
-                          setCliente({ ...cliente, documento: e.target.value })
-                        }
-                      />
-                    </Grid>
-                    <Grid size={4}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="DV"
-                        value={cliente.dv}
-                        onChange={(e) => setCliente({ ...cliente, dv: e.target.value })}
-                      />
-                    </Grid>
-                    <Grid size={12}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Nombre"
-                        value={cliente.nombre}
-                        onChange={(e) =>
-                          setCliente({ ...cliente, nombre: e.target.value })
-                        }
-                      />
-                    </Grid>
-                    <Grid size={12}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Dirección"
-                        value={cliente.direccion}
-                        onChange={(e) =>
-                          setCliente({ ...cliente, direccion: e.target.value })
-                        }
-                      />
-                    </Grid>
-                    <Grid size={8}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Celular"
-                        value={cliente.telefono}
-                        onChange={(e) =>
-                          setCliente({ ...cliente, telefono: e.target.value })
-                        }
-                      />
-                    </Grid>
-
-                  </Grid>
-                </Grid>
-                <Grid size={6}> {/* Lado derecho */}
-                  <Grid container spacing={1}>
-                    <Grid size={12}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel>Delivery</InputLabel>
-                        <Select
-                          value={delivery}
-                          label="Delivery"
-                          onChange={(e) => setDelivery(e.target.value)}
-                        >
-                          <MenuItem value="">Seleccione...</MenuItem>
-                          <MenuItem value="SI">Sí</MenuItem>
-                          <MenuItem value="NO">No</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid size={12}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel>Tipo de Pago</InputLabel>
-                        <Select
-                          value={tipoPago}
-                          label="Tipo de Pago"
-                          onChange={(e) => setTipoPago(e.target.value)}
-                        >
-                          <MenuItem value="">Seleccione...</MenuItem>
-                          <MenuItem value="EFECTIVO">Efectivo</MenuItem>
-                          <MenuItem value="TARJETA">Tarjeta</MenuItem>
-                          <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-                          <MenuItem value="CREDITO">Crédito</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid size={10}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        type="date"
-                        label="Fecha"
-                        value={fecha}
-                        onChange={(e) => setFecha(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
-
-              {/* Total */}
-              <Box sx={{ mt: 2, textAlign: 'right' }}>
-                <Typography variant="h5" color="error" sx={{ fontWeight: 'bold' }}>
-                  Total: {totales.total.toLocaleString('es-PY')} Gs.
+    <RequirePermission permission="ACCESO_COMPRAS">
+      <Box sx={{ height: 'calc(100vh - 120px)', p: 2 }}>
+        {/* Botones de Acción */}
+        <Stack direction="row" spacing={1} sx={{ height: '5vh', mb: 2 }} >
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<AddIcon />}
+            onClick={handleNuevo}
+          >
+            Nuevo
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PrintIcon />}
+            onClick={handleImprimir}
+            disabled={!pedidoSeleccionado}
+          >
+            Imprimir
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={handleGuardar}
+          >
+            Guardar
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            startIcon={<ReceiptIcon />}
+            onClick={handleFacturar}
+          >
+            Facturar Pedido
+          </Button>
+        </Stack>
+        <Grid container spacing={2} sx={{ height: '100%' }}>
+          {/* Lado Izquierdo - Formulario de Pedido */}
+          <Grid size={6}>
+            <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* Búsqueda de Productos */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Productos
                 </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
+                {/* Stack de busqueda de producto */}
+                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Buscar producto (Alt+P)"
+                    value={terminoBusqueda}
+                    onChange={(e) => setTerminoBusqueda(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleBuscarProducto();
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleBuscarProducto}
+                    startIcon={<SearchIcon />}
+                  >
+                    Buscar
+                  </Button>
+                </Stack>
 
-        {/* Lado Derecho - Lista de Pedidos del Día */}
-        <Grid size={6}>
-          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" gutterBottom>
-              Pedidos del Día
-            </Typography>
-            {/* Lista de Pedidos con Scroll */}
-            <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-              <TableContainer sx={{ maxHeight: '100%' }}>
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
-                        Nro
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
-                        Cliente
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
-                        Tipo
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}
-                      >
-                        Fecha
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {pedidosDelDia.length > 0 ? (
-                      pedidosDelDia.map((pedido) => (
-                        <TableRow
-                          key={`${pedido.idPedido}-${pedido.nro}`}
-                          hover
-                          selected={pedidoSeleccionado?.idPedido === pedido.idPedido}
-                          sx={{
-                            cursor: 'pointer',
-                            bgcolor:
-                              pedidoSeleccionado?.idPedido === pedido.idPedido
-                                ? 'action.selected'
-                                : undefined
-                          }}
-                          onClick={() => handleSeleccionarPedido(pedido)}
+                {/* Detalle del Producto Seleccionado */}
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                  {productoSeleccionado ? (
+                    <Stack spacing={1}>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {productoSeleccionado.nombreMercaderia}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Código: {productoSeleccionado.codigo}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Precio: {productoSeleccionado.precio.toLocaleString('es-PY')} Gs.
+                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <TextField
+                          label="Cantidad"
+                          type="number"
+                          size="small"
+                          value={cantidadSeleccionada}
+                          onChange={(e) => setCantidadSeleccionada(Number(e.target.value) || 0)}
+                          inputProps={{ min: 0.01, step: 1 }}
+                          sx={{ width: 140 }}
+                        />
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleAgregarProducto}
                         >
-                          <TableCell>{pedido.nro}</TableCell>
-                          <TableCell>{pedido.nombreCliente}</TableCell>
-                          <TableCell>{pedido.nombreTipo}</TableCell>
+                          Agregar
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Seleccione un producto para ver los detalles
+                    </Typography>
+                  )}
+                </Paper>
+              </Box>
+
+              {/* Tabla de Items */}
+              <Box sx={{ flexGrow: 1, overflow: 'auto', mb: 2 }}>
+                <TableContainer>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Nro</TableCell>
+                        <TableCell>Descripción</TableCell>
+                        <TableCell align="right">Unidades</TableCell>
+                        <TableCell align="right">Precio</TableCell>
+                        <TableCell align="right">Total</TableCell>
+                        <TableCell align="center">Acciones</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {items.map((item) => (
+                        <TableRow key={item.idDetPedidoTmp}>
+                          <TableCell>{item.nro}</TableCell>
+                          <TableCell>{item.nombreMercaderia}</TableCell>
+                          <TableCell align="right">{item.cantidad}</TableCell>
                           <TableCell align="right">
-                            {new Date(pedido.fechaAlta).toLocaleString('es-PY')}
+                            {item.precioUnitario?.toLocaleString('es-PY')}
+                          </TableCell>
+                          <TableCell align="right">
+                            {item.subtotal.toLocaleString('es-PY')}
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleEliminarItem(item.idDetPedidoTmp)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+
+              {/* Formulario del Cliente */}
+              <Box sx={{ mt: 'auto' }}>
+                <Typography variant="h6" gutterBottom>
+                  Datos del Cliente (Alt+C)
+                </Typography>
+                {/* Formulario del cliente */}
+                <Grid container spacing={2}>
+                  <Grid size={6}> {/* Lado izquierdo */}
+                    <Grid container spacing={1}> {/* Grid para el lado izquierdo */}
+                      <Grid size={6}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="RUC"
+                          value={cliente.documento}
+                          onChange={(e) =>
+                            setCliente({ ...cliente, documento: e.target.value })
+                          }
+                        />
+                      </Grid>
+                      <Grid size={4}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="DV"
+                          value={cliente.dv}
+                          onChange={(e) => setCliente({ ...cliente, dv: e.target.value })}
+                        />
+                      </Grid>
+                      <Grid size={12}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Nombre"
+                          value={cliente.nombre}
+                          onChange={(e) =>
+                            setCliente({ ...cliente, nombre: e.target.value })
+                          }
+                        />
+                      </Grid>
+                      <Grid size={12}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Dirección"
+                          value={cliente.direccion}
+                          onChange={(e) =>
+                            setCliente({ ...cliente, direccion: e.target.value })
+                          }
+                        />
+                      </Grid>
+                      <Grid size={8}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Celular"
+                          value={cliente.telefono}
+                          onChange={(e) =>
+                            setCliente({ ...cliente, telefono: e.target.value })
+                          }
+                        />
+                      </Grid>
+
+                    </Grid>
+                  </Grid>
+                  <Grid size={6}> {/* Lado derecho */}
+                    <Grid container spacing={1}>
+                      <Grid size={12}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Delivery</InputLabel>
+                          <Select
+                            value={delivery}
+                            label="Delivery"
+                            onChange={(e) => setDelivery(e.target.value)}
+                          >
+                            <MenuItem value="">Seleccione...</MenuItem>
+                            <MenuItem value="SI">Sí</MenuItem>
+                            <MenuItem value="NO">No</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={12}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Tipo de Pago</InputLabel>
+                          <Select
+                            value={tipoPago}
+                            label="Tipo de Pago"
+                            onChange={(e) => setTipoPago(e.target.value)}
+                          >
+                            <MenuItem value="">Seleccione...</MenuItem>
+                            <MenuItem value="EFECTIVO">Efectivo</MenuItem>
+                            <MenuItem value="TARJETA">Tarjeta</MenuItem>
+                            <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
+                            <MenuItem value="CREDITO">Crédito</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={10}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="date"
+                          label="Fecha"
+                          value={fecha}
+                          onChange={(e) => setFecha(e.target.value)}
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                </Grid>
+
+                {/* Total */}
+                <Box sx={{ mt: 2, textAlign: 'right' }}>
+                  <Typography variant="h5" color="error" sx={{ fontWeight: 'bold' }}>
+                    Total: {totales.total.toLocaleString('es-PY')} Gs.
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Lado Derecho - Lista de Pedidos del Día */}
+          <Grid size={6}>
+            <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>
+                Pedidos del Día
+              </Typography>
+              {/* Lista de Pedidos con Scroll */}
+              <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                <TableContainer sx={{ maxHeight: '100%' }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
                       <TableRow>
-                        <TableCell colSpan={5} align="center">
-                          <Typography variant="body2" color="text.secondary">
-                            No hay pedidos para mostrar
-                          </Typography>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
+                          Nro
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
+                          Cliente
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>
+                          Tipo
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}
+                        >
+                          Fecha
                         </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          </Paper>
+                    </TableHead>
+                    <TableBody>
+                      {pedidosDelDia.length > 0 ? (
+                        pedidosDelDia.map((pedido) => (
+                          <TableRow
+                            key={`${pedido.idPedido}-${pedido.nro}`}
+                            hover
+                            selected={pedidoSeleccionado?.idPedido === pedido.idPedido}
+                            sx={{
+                              cursor: 'pointer',
+                              bgcolor:
+                                pedidoSeleccionado?.idPedido === pedido.idPedido
+                                  ? 'action.selected'
+                                  : undefined
+                            }}
+                            onClick={() => handleSeleccionarPedido(pedido)}
+                          >
+                            <TableCell>{pedido.nro}</TableCell>
+                            <TableCell>{pedido.nombreCliente}</TableCell>
+                            <TableCell>{pedido.nombreTipo}</TableCell>
+                            <TableCell align="right">
+                              {new Date(pedido.fechaAlta).toLocaleString('es-PY')}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center">
+                            <Typography variant="body2" color="text.secondary">
+                              No hay pedidos para mostrar
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
 
-      {/* Modal de búsqueda de cliente */}
-      <SearchClienteModal
-        open={openClienteModal}
-        onClose={() => setOpenClienteModal(false)}
-        onClienteSelected={handleClienteSelected}
-      />
-      {/* Modal de búsqueda de producto */}
-      {idTerminalWeb && (
-        <SearchProductModal
-          open={openProductModal}
-          onClose={() => setOpenProductModal(false)}
-          onSelectProduct={handleSelectProduct}
-          idTerminalWeb={idTerminalWeb}
-          busqueda={terminoBusqueda}
+        {/* Modal de búsqueda de cliente */}
+        <SearchClienteModal
+          open={openClienteModal}
+          onClose={() => setOpenClienteModal(false)}
+          onClienteSelected={handleClienteSelected}
         />
-      )}
-    </Box>
+        {/* Modal de búsqueda de producto */}
+        {idTerminalWeb && (
+          <SearchProductModal
+            open={openProductModal}
+            onClose={() => setOpenProductModal(false)}
+            onSelectProduct={handleSelectProduct}
+            idTerminalWeb={idTerminalWeb}
+            busqueda={terminoBusqueda}
+          />
+        )}
+      </Box>
+    </RequirePermission>
   );
 };
 

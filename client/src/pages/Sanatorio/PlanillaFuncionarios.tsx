@@ -25,6 +25,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useTerminal } from '../../hooks/useTerminal';
 import { planillasService } from '../../services/planillas.service';
 import { sectorService } from '../../services/sector.service';
+import RequirePermission from '../../components/RequirePermission';
 
 const PlanillaFuncionarios: React.FC = () => {
     const { idTerminalWeb } = useTerminal();
@@ -172,154 +173,156 @@ const PlanillaFuncionarios: React.FC = () => {
     }, [handleGuardar]); // Added dependency to ensure latest state is used if needed
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>
-                Planilla de Funcionarios
-            </Typography>
+        <RequirePermission permission="ACCESO_SANATORIO">
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h4" gutterBottom>
+                    Planilla de Funcionarios
+                </Typography>
 
-            {/* Header Controls */}
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={3}>
-                        <FormControl fullWidth size="small">
-                            <InputLabel>Tipo Planilla</InputLabel>
-                            <Select
-                                value={idTipoPlanilla}
-                                label="Tipo Planilla"
-                                onChange={(e) => setIdTipoPlanilla(Number(e.target.value))}
-                            >
-                                {tiposPlanilla.map((tipo) => (
-                                    <MenuItem key={tipo.idTipoPlanillaFun} value={tipo.idTipoPlanillaFun}>
-                                        {tipo.nombreTipoPlanillaFun}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                {/* Header Controls */}
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} md={3}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Tipo Planilla</InputLabel>
+                                <Select
+                                    value={idTipoPlanilla}
+                                    label="Tipo Planilla"
+                                    onChange={(e) => setIdTipoPlanilla(Number(e.target.value))}
+                                >
+                                    {tiposPlanilla.map((tipo) => (
+                                        <MenuItem key={tipo.idTipoPlanillaFun} value={tipo.idTipoPlanillaFun}>
+                                            {tipo.nombreTipoPlanillaFun}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <TextField
+                                fullWidth
+                                type="date"
+                                label="Fecha"
+                                size="small"
+                                value={fecha}
+                                onChange={(e) => setFecha(e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                                onKeyDown={(e) => handleKeyDown(e, funcionarioRef)}
+                            />
+                        </Grid>
                     </Grid>
-                    <Grid item xs={12} md={3}>
-                        <TextField
-                            fullWidth
-                            type="date"
-                            label="Fecha"
-                            size="small"
-                            value={fecha}
-                            onChange={(e) => setFecha(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
-                            onKeyDown={(e) => handleKeyDown(e, funcionarioRef)}
-                        />
-                    </Grid>
-                </Grid>
-            </Paper>
+                </Paper>
 
-            {/* Messages */}
-            {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
-            {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
+                {/* Messages */}
+                {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
+                {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
 
-            {/* Input Form */}
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid item size={3}>
-                        <Autocomplete
-                            options={funcionarios}
-                            getOptionLabel={(option) => option.nombreFuncionario || ''}
-                            value={selectedFuncionario}
-                            ref={funcionarioRef}
-                            onChange={(_, newValue) => {
-                                setSelectedFuncionario(newValue);
-                                if (newValue && newValue.idSector) {
-                                    const sector = sectores.find(s => s.idSector === newValue.idSector);
-                                    if (sector) {
-                                        setSelectedSector(sector);
+                {/* Input Form */}
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item size={3}>
+                            <Autocomplete
+                                options={funcionarios}
+                                getOptionLabel={(option) => option.nombreFuncionario || ''}
+                                value={selectedFuncionario}
+                                ref={funcionarioRef}
+                                onChange={(_, newValue) => {
+                                    setSelectedFuncionario(newValue);
+                                    if (newValue && newValue.idSector) {
+                                        const sector = sectores.find(s => s.idSector === newValue.idSector);
+                                        if (sector) {
+                                            setSelectedSector(sector);
+                                        }
+                                    } else {
+                                        setSelectedSector(null);
                                     }
-                                } else {
-                                    setSelectedSector(null);
-                                }
-                            }}
-                            renderInput={(params) => (
-                                <TextField {...params} label="Funcionario" size="small" fullWidth />
-                            )}
-                        />
+                                }}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Funcionario" size="small" fullWidth />
+                                )}
+                            />
+                        </Grid>
+                        <Grid size={3}>
+                            <Autocomplete
+                                options={sectores}
+                                getOptionLabel={(option) => option.nombreSector || ''}
+                                value={selectedSector}
+                                ref={sectorRef}
+                                onChange={(_, newValue) => setSelectedSector(newValue)}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Sector" size="small" fullWidth />
+                                )}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={2}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleAgregar}
+                                ref={agregarRef}
+                                startIcon={<AddIcon />}
+                                fullWidth
+                            >
+                                Agregar
+                            </Button>
+                        </Grid>
                     </Grid>
-                    <Grid size={3}>
-                        <Autocomplete
-                            options={sectores}
-                            getOptionLabel={(option) => option.nombreSector || ''}
-                            value={selectedSector}
-                            ref={sectorRef}
-                            onChange={(_, newValue) => setSelectedSector(newValue)}
-                            renderInput={(params) => (
-                                <TextField {...params} label="Sector" size="small" fullWidth />
-                            )}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={2}>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleAgregar}
-                            ref={agregarRef}
-                            startIcon={<AddIcon />}
-                            fullWidth
-                        >
-                            Agregar
-                        </Button>
-                    </Grid>
-                </Grid>
-            </Paper>
+                </Paper>
 
-            {/* Table */}
-            <TableContainer component={Paper} sx={{ mb: 2, maxHeight: '400px' }}>
-                <Table stickyHeader size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Nro</TableCell>
-                            <TableCell>Funcionario</TableCell>
-                            <TableCell>Sector</TableCell>
-                            <TableCell align="center">Acciones</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {items.map((item, index) => (
-                            <TableRow key={index}>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell>{item.nombreFuncionario || item.funcionario}</TableCell>
-                                <TableCell>{item.nombreSector || item.sector || '-'}</TableCell>
-                                <TableCell align="center">
-                                    <Button
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleEliminar(item.idDetPlanillaFunTmp)}
-                                    >
-                                        <DeleteIcon fontSize="small" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {items.length === 0 && (
+                {/* Table */}
+                <TableContainer component={Paper} sx={{ mb: 2, maxHeight: '400px' }}>
+                    <Table stickyHeader size="small">
+                        <TableHead>
                             <TableRow>
-                                <TableCell colSpan={4} align="center">
-                                    No hay funcionarios agregados
-                                </TableCell>
+                                <TableCell>Nro</TableCell>
+                                <TableCell>Funcionario</TableCell>
+                                <TableCell>Sector</TableCell>
+                                <TableCell align="center">Acciones</TableCell>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                            {items.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>{item.nombreFuncionario || item.funcionario}</TableCell>
+                                    <TableCell>{item.nombreSector || item.sector || '-'}</TableCell>
+                                    <TableCell align="center">
+                                        <Button
+                                            size="small"
+                                            color="error"
+                                            onClick={() => handleEliminar(item.idDetPlanillaFunTmp)}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {items.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={4} align="center">
+                                        No hay funcionarios agregados
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
 
-            {/* Footer Actions */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    startIcon={<SaveIcon />}
-                    onClick={handleGuardar}
-                    disabled={loading || items.length === 0}
-                >
-                    Guardar Planilla (F2)
-                </Button>
+                {/* Footer Actions */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        size="large"
+                        startIcon={<SaveIcon />}
+                        onClick={handleGuardar}
+                        disabled={loading || items.length === 0}
+                    >
+                        Guardar Planilla (F2)
+                    </Button>
+                </Box>
             </Box>
-        </Box>
+        </RequirePermission>
     );
 };
 

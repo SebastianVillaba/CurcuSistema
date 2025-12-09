@@ -31,6 +31,7 @@ import { ajustesService } from '../../services/ajustes.service';
 import SearchProductModal from '../../components/SearchProductModal';
 import { remisionService } from '../../services/remision.service';
 import { comprasService } from '../../services/compras.service';
+import RequirePermission from '../../components/RequirePermission';
 
 const Ajustes: React.FC = () => {
     const { idTerminalWeb } = useTerminal();
@@ -233,172 +234,174 @@ const Ajustes: React.FC = () => {
     };
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>
-                Ajustes de Stock
-            </Typography>
+        <RequirePermission permission="ACCESO_AJUSTES">
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h4" gutterBottom>
+                    Ajustes de Stock
+                </Typography>
 
-            {/* Messages */}
-            {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
-            {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
+                {/* Messages */}
+                {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
+                {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
 
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Box sx={{
-                    display: 'flex',
-                    gap: 2,
-                    flexDirection: 'column'
-                }}>
-                    <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-                        <Autocomplete
-                            options={deposito}
-                            getOptionLabel={deposito => deposito.nombreDeposito}
-                            value={selectedDeposito}
-                            onChange={(_, newValue) => {
-                                setSelectedDeposito(newValue);
-                            }}
-                            renderInput={(params) => (
-                                <TextField {...params} label="Depósito" size="small" fullWidth />
-                            )}
-                        />
-                        <FormControl fullWidth size="small">
-                            <InputLabel>Tipo de Ajuste</InputLabel>
-                            <Select
-                                value={selectedTipoAjuste || 0}
-                                label="Tipo de Ajuste"
-                                onChange={(e) => setSelectedTipoAjuste(Number(e.target.value))}
-                            >
-                                <MenuItem value={0}>Seleccione...</MenuItem>
-                                {tipoAjuste.map((tipo: any) => (
-                                    <MenuItem key={tipo.idTipoAjuste} value={tipo.idTipoAjuste}>
-                                        {tipo.descripcion}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
-                    <TextField
-                        fullWidth
-                        label="Explicación"
-                        value={explicacion}
-                        onChange={(e) => setExplicacion(e.target.value)}
-                        size="small"
-                        multiline
-                        rows={3}
-                    />
-                </Box>
-            </Paper>
-            {/* Main Form */}
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Grid container spacing={2}>
-                    {/* Row 2 */}
-                    <Grid item xs={12} md={4}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <TextField
-                                fullWidth
-                                label="Producto (Enter para buscar)"
-                                value={productoSearchTerm}
-                                onChange={(e) => {
-                                    setProductoSearchTerm(e.target.value);
-                                    if (selectedProduct && e.target.value !== selectedProduct.nombreProducto) {
-                                        setSelectedProduct(null);
-                                        setStock('');
-                                    }
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Box sx={{
+                        display: 'flex',
+                        gap: 2,
+                        flexDirection: 'column'
+                    }}>
+                        <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+                            <Autocomplete
+                                options={deposito}
+                                getOptionLabel={deposito => deposito.nombreDeposito}
+                                value={selectedDeposito}
+                                onChange={(_, newValue) => {
+                                    setSelectedDeposito(newValue);
                                 }}
-                                onKeyDown={handleProductoSearchKeyDown}
-                                size="small"
-                                InputProps={{
-                                    endAdornment: (
-                                        <IconButton size="small" onClick={() => setOpenProductoModal(true)}>
-                                            <SearchIcon />
-                                        </IconButton>
-                                    )
-                                }}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Depósito" size="small" fullWidth />
+                                )}
                             />
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Tipo de Ajuste</InputLabel>
+                                <Select
+                                    value={selectedTipoAjuste || 0}
+                                    label="Tipo de Ajuste"
+                                    onChange={(e) => setSelectedTipoAjuste(Number(e.target.value))}
+                                >
+                                    <MenuItem value={0}>Seleccione...</MenuItem>
+                                    {tipoAjuste.map((tipo: any) => (
+                                        <MenuItem key={tipo.idTipoAjuste} value={tipo.idTipoAjuste}>
+                                            {tipo.descripcion}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                         </Box>
-                    </Grid>
-                    <Grid item xs={6} md={2}>
                         <TextField
                             fullWidth
-                            label="Cant."
-                            type="number"
-                            value={cantidad}
-                            onChange={(e) => setCantidad(e.target.value)}
+                            label="Explicación"
+                            value={explicacion}
+                            onChange={(e) => setExplicacion(e.target.value)}
                             size="small"
+                            multiline
+                            rows={3}
                         />
+                    </Box>
+                </Paper>
+                {/* Main Form */}
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Grid container spacing={2}>
+                        {/* Row 2 */}
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Producto (Enter para buscar)"
+                                    value={productoSearchTerm}
+                                    onChange={(e) => {
+                                        setProductoSearchTerm(e.target.value);
+                                        if (selectedProduct && e.target.value !== selectedProduct.nombreProducto) {
+                                            setSelectedProduct(null);
+                                            setStock('');
+                                        }
+                                    }}
+                                    onKeyDown={handleProductoSearchKeyDown}
+                                    size="small"
+                                    InputProps={{
+                                        endAdornment: (
+                                            <IconButton size="small" onClick={() => setOpenProductoModal(true)}>
+                                                <SearchIcon />
+                                            </IconButton>
+                                        )
+                                    }}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={6} md={2}>
+                            <TextField
+                                fullWidth
+                                label="Cant."
+                                type="number"
+                                value={cantidad}
+                                onChange={(e) => setCantidad(e.target.value)}
+                                size="small"
+                            />
+                        </Grid>
+                        <Grid item xs={6} md={1}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleAgregar}
+                                fullWidth
+                                sx={{ height: '100%' }}
+                            >
+                                <AddIcon />
+                            </Button>
+                        </Grid>
+
                     </Grid>
-                    <Grid item xs={6} md={1}>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleAgregar}
-                            fullWidth
-                            sx={{ height: '100%' }}
-                        >
-                            <AddIcon />
-                        </Button>
-                    </Grid>
-
-                </Grid>
-            </Paper>
+                </Paper>
 
 
-            {/* Table */}
-            <TableContainer component={Paper} sx={{ maxHeight: '400px' }}>
-                <Table stickyHeader size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Nro</TableCell>
-                            <TableCell>Codigo</TableCell>
-                            <TableCell>Nombre de Mercaderia</TableCell>
-                            <TableCell>Stock</TableCell>
-                            <TableCell>Cant.</TableCell>
-                            <TableCell>Stock Final</TableCell>
-                            <TableCell>Acciones</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {items.map((item, index) => (
-                            <TableRow key={index}>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell>{item.codigo || '-'}</TableCell>
-                                <TableCell>{item.nombreMercaderia || item.producto || '-'}</TableCell>
-                                <TableCell>{item.stockAnterior || '-'}</TableCell>
-                                <TableCell>{item.cantidadAjuste}</TableCell>
-                                <TableCell>{item.stockNuevo || '-'}</TableCell>
-                                <TableCell>
-                                    <IconButton size="small" color="error" onClick={() => handleEliminar(item.idDetAjusteStockTmp)}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {items.length === 0 && (
+                {/* Table */}
+                <TableContainer component={Paper} sx={{ maxHeight: '400px' }}>
+                    <Table stickyHeader size="small">
+                        <TableHead>
                             <TableRow>
-                                <TableCell colSpan={7} align="center">
-                                    No hay items en el ajuste
-                                </TableCell>
+                                <TableCell>Nro</TableCell>
+                                <TableCell>Codigo</TableCell>
+                                <TableCell>Nombre de Mercaderia</TableCell>
+                                <TableCell>Stock</TableCell>
+                                <TableCell>Cant.</TableCell>
+                                <TableCell>Stock Final</TableCell>
+                                <TableCell>Acciones</TableCell>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                            {items.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>{item.codigo || '-'}</TableCell>
+                                    <TableCell>{item.nombreMercaderia || item.producto || '-'}</TableCell>
+                                    <TableCell>{item.stockAnterior || '-'}</TableCell>
+                                    <TableCell>{item.cantidadAjuste}</TableCell>
+                                    <TableCell>{item.stockNuevo || '-'}</TableCell>
+                                    <TableCell>
+                                        <IconButton size="small" color="error" onClick={() => handleEliminar(item.idDetAjusteStockTmp)}>
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {items.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={7} align="center">
+                                        No hay items en el ajuste
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
 
-            {/* Action Buttons */}
-            <Paper sx={{ p: 2, mt: 2, display: 'flex', gap: 2 }}>
-                <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleGuardar}>
-                    Guardar
-                </Button>
-            </Paper>
+                {/* Action Buttons */}
+                <Paper sx={{ p: 2, mt: 2, display: 'flex', gap: 2 }}>
+                    <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleGuardar}>
+                        Guardar
+                    </Button>
+                </Paper>
 
-            <SearchProductModal
-                open={searchModalOpen}
-                onClose={() => setSearchModalOpen(false)}
-                onSelectProduct={handleProductSelect}
-                idTerminalWeb={idTerminalWeb || 0}
-                busqueda={productoSearchTerm}
-                useComprasSearch={true}
-            />
-        </Box>
+                <SearchProductModal
+                    open={searchModalOpen}
+                    onClose={() => setSearchModalOpen(false)}
+                    onSelectProduct={handleProductSelect}
+                    idTerminalWeb={idTerminalWeb || 0}
+                    busqueda={productoSearchTerm}
+                    useComprasSearch={true}
+                />
+            </Box>
+        </RequirePermission>
     );
 };
 

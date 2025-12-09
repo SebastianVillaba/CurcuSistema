@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { executeRequest, sql } from "../utils/dbHandler";
 
 interface Usuario {
-  id: number;
+  idUsuario: number;
   username: string;
   password: string;
   role: string;
@@ -63,6 +63,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    console.log("User from DB:", result.recordset[0]);
     const user = result.recordset[0] as Usuario;
     const validPassword = await bcrypt.compare(password, user.password);
 
@@ -72,7 +73,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username },
+      { id: user.idUsuario, username: user.username },
       process.env.JWT_SECRET || "mi_secreto_temporal",
       { expiresIn: "1h" }
     );
@@ -81,7 +82,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       message: "Login exitoso",
       token,
       user: {
-        id: user.id,
+        idUsuario: user.idUsuario,
         username: user.username,
         role: user.role
       },

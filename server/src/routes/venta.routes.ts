@@ -22,6 +22,9 @@ router.post('/guardar', guardarVenta);
 
 // Ruta para consultar la factura actual
 // TODO: Agregar autenticación cuando el sistema de login esté implementado
+// Ruta para consultar la factura actual
+// TODO: Agregar autenticación cuando el sistema de login esté implementado
 router.get('/facturaActual', consultaFacturaCorrelativa);
+
 
 export default router;

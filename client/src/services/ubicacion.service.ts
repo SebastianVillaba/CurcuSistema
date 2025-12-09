@@ -51,5 +51,5 @@ export const ubicacionService = {
       console.error('Error al obtener ciudades:', error);
       throw error;
     }
-  }
+  },
 };

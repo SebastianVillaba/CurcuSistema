@@ -14,9 +14,16 @@ export interface IAgregarDetPlanillaPacienteRequest {
 }
 
 export interface IGuardarPlanillaPacienteRequest {
-    idUsuario: number;
+    idUsuarioAlta: number;
     idTerminalWeb: number;
     fechaPlanilla: string; // YYYY-MM-DD
+    idTipoPlanillaPac: number;
+}
+
+export interface IGuardarPlanillaFuncionarioRequest {
+    idUsuario: number;
+    idTerminalWeb: number;
+    fechaPlanilla: string;
     idTipoPlanilla: number;
 }
 
@@ -114,7 +121,7 @@ export const planillasService = {
         }
     },
 
-    guardarPlanillaFuncionario: async (data: IGuardarPlanillaPacienteRequest) => {
+    guardarPlanillaFuncionario: async (data: IGuardarPlanillaFuncionarioRequest) => {
         try {
             const response = await axios.post(`${API_BASE_URL}/planillas/guardarPlanillaFuncionario`, data);
             return response.data;

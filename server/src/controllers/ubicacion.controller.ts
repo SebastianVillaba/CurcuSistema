@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { executeRequest, sql } from "../utils/dbHandler";
-import { 
-  DepartamentosResponse, 
-  DistritosResponse, 
-  CiudadesResponse 
+import {
+  DepartamentosResponse,
+  DistritosResponse,
+  CiudadesResponse
 } from "../types/Ubicacion/ubicacion.type";
 
 /**

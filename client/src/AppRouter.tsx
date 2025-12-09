@@ -22,6 +22,9 @@ import PlanillaPacientes from './pages/Sanatorio/PlanillaPacientes';
 import PlanillaFuncionarios from './pages/Sanatorio/PlanillaFuncionarios';
 import Ajustes from './pages/Mercaderia/Ajustes';
 import Auditoria from './pages/Auditoria/Auditoria';
+import Roles from './pages/Administracion/Roles';
+import UsuariosABM from './pages/Administracion/UsuariosABM';
+import TerminalesABM from './pages/Administracion/TerminalesABM';
 
 // Placeholder components for sub-routes
 const ClientesABM = () => <Container><h3>Submenú Clientes (ABM)</h3></Container>;
@@ -78,6 +81,11 @@ const AppRouter: React.FC = () => {
           <Route path="funcionarios" element={<PlanillaFuncionarios />} />
         </Route>
         <Route path="auditoria" element={<Auditoria />} />
+        <Route path="administracion">
+          <Route path="roles" element={<Roles />} />
+          <Route path="usuarios" element={<UsuariosABM />} />
+          <Route path="terminales" element={<TerminalesABM />} />
+        </Route>
       </Route>
 
       {/* Redirección por defecto al login */}

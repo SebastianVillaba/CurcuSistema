@@ -34,6 +34,7 @@ import PersonalInjuryIcon from '@mui/icons-material/PersonalInjury';
 import Collapse from '@mui/material/Collapse';
 import { useNavigate } from 'react-router-dom';
 import { LocalHospital } from '@mui/icons-material';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 const drawerWidth = 240;
 
@@ -170,8 +171,10 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     },
     {
       text: 'Clientes',
-      path: '/clientes',
-      icon: <BusinessIcon />
+      icon: <BusinessIcon />,
+      subItems: [
+        { text: 'Pedidos', path: '/pedidos', icon: <ReceiptLongIcon /> }
+      ]
     },
     {
       text: 'ABM',
@@ -229,6 +232,15 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       text: 'Auditoría',
       path: '/auditoria',
       icon: <ReceiptLongIcon /> // Using ReceiptLongIcon as a placeholder for Audit log
+    },
+    {
+      text: 'Administración',
+      icon: <SettingsIcon />, // Changed to SettingsIcon
+      subItems: [
+        { text: 'Roles', path: '/administracion/roles', icon: <PeopleIcon /> },
+        { text: 'Usuarios', path: '/administracion/usuarios', icon: <PeopleIcon /> },
+        { text: 'Terminales', path: '/administracion/terminales', icon: <InventoryIcon /> },
+      ]
     },
   ];
 

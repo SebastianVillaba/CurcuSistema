@@ -19,6 +19,9 @@ import remisionRoutes from './remision.routes';
 import ajustesRoutes from './ajustes.routes';
 import impuestoRoutes from './impuesto.routes';
 import auditoriaRoutes from './auditoria.routes';
+import rolRoutes from './rol.routes';
+import usuarioRoutes from './usuario.routes';
+import terminalWebRoutes from './terminalWeb.routes';
 
 const router = Router();
 
@@ -42,5 +45,8 @@ router.use('/sector', sectorRoutes);
 router.use('/ajustes', ajustesRoutes);
 router.use('/impuesto', impuestoRoutes);
 router.use('/auditoria', auditoriaRoutes);
+router.use('/rol', rolRoutes);
+router.use('/usuario', usuarioRoutes);
+router.use('/terminal-web', terminalWebRoutes);
 
 export default router;

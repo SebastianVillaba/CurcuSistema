@@ -284,3 +284,4 @@ export const consultaFacturaCorrelativa = async (req: Request, res: Response): P
     }
   }
 }
+

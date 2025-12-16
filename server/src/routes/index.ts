@@ -5,9 +5,9 @@ import personaRoutes from './persona.routes';
 import productoRoutes from './producto.routes';
 import ubicacionRoutes from './ubicacion.routes';
 import ventaRoutes from './venta.routes';
-import terminalRoutes from './terminal.routes'; // Importar rutas de terminal
-import cajaRoutes from './caja.routes'; // Importar rutas de caja
-import reporteRoutes from './reporte.routes'; // Importar rutas de reportes
+import terminalRoutes from './terminal.routes';
+import cajaRoutes from './caja.routes';
+import reporteRoutes from './reporte.routes';
 import pedidoRoutes from './pedido.routes';
 import pedidoInternoRoutes from './pedidoInterno.routes';
 import deliveryRoutes from './delivery.routes';
@@ -22,6 +22,7 @@ import auditoriaRoutes from './auditoria.routes';
 import rolRoutes from './rol.routes';
 import usuarioRoutes from './usuario.routes';
 import terminalWebRoutes from './terminalWeb.routes';
+import stockInicialRoutes from './stockInicial.routes';
 
 const router = Router();
 
@@ -48,5 +49,6 @@ router.use('/auditoria', auditoriaRoutes);
 router.use('/rol', rolRoutes);
 router.use('/usuario', usuarioRoutes);
 router.use('/terminal-web', terminalWebRoutes);
+router.use('/stock-inicial', stockInicialRoutes);
 
 export default router;

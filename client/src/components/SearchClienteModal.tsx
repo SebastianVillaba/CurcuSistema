@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -6,7 +6,6 @@ import {
   Tabs,
   Tab,
   Box,
-  TextField,
   Button,
   Table,
   TableBody,
@@ -20,6 +19,7 @@ import {
   Alert,
   Grid,
 } from '@mui/material';
+import TextField from './UppercaseTextField';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import { personaService } from '../services/persona.service';
@@ -59,38 +59,103 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
   const [selectedCliente, setSelectedCliente] = useState<ClienteResultado | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+
+  const busquedaRef = useRef<HTMLInputElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  // Ref para mantener referencia actualizada de clientes (evita stale closures)
+  const clientesRef = useRef<ClienteResultado[]>([]);
+  const selectedIndexRef = useRef<number>(-1);
+
+  // Mantener clientesRef sincronizado
+  useEffect(() => {
+    clientesRef.current = clientes;
+  }, [clientes]);
+
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const currentClientes = clientesRef.current;
+
+    // Si no hay clientes, solo permitir Enter para buscar
+    if (currentClientes.length === 0) {
+      if (e.key === 'Enter' && searchTerm.trim()) {
+        e.preventDefault();
+        handleSearch();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev < currentClientes.length - 1 ? prev + 1 : prev));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        const currentIndex = selectedIndexRef.current;
+        if (currentIndex >= 0 && currentIndex < currentClientes.length) {
+          onClienteSelected(currentClientes[currentIndex]);
+          onClose();
+        }
+        break;
+    }
+  }, [onClienteSelected, onClose, searchTerm]);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
       setClientes([]);
       setError('');
+      setSelectedIndex(-1);
       return;
     }
 
     setIsSearching(true);
     setError('');
-    
+
     try {
       const results = await personaService.consultaCliente(searchTerm.trim());
       setClientes(results);
-      
-      if (results.length === 0) {
+
+      if (results.length > 0) {
+        setSelectedIndex(0);
+      } else {
+        setSelectedIndex(-1);
         setError('No se encontraron clientes');
       }
     } catch (error: any) {
       console.error('Error al buscar clientes:', error);
       setError(error.message || 'Error al buscar clientes');
       setClientes([]);
+      setSelectedIndex(-1);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+  // Auto-scroll cuando cambia la selección
+  useEffect(() => {
+    if (selectedIndex >= 0 && tableContainerRef.current) {
+      const container = tableContainerRef.current;
+      const rows = container.querySelectorAll('tbody tr');
+      const selectedRow = rows[selectedIndex] as HTMLElement;
+
+      if (selectedRow) {
+        const containerRect = container.getBoundingClientRect();
+        const rowRect = selectedRow.getBoundingClientRect();
+
+        if (rowRect.bottom > containerRect.bottom || rowRect.top < containerRect.top) {
+          selectedRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
     }
-  };
+  }, [selectedIndex]);
 
   const handleRowClick = (cliente: ClienteResultado) => {
     setSelectedCliente(cliente);
@@ -108,13 +173,15 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
   };
 
   // Reset state when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       setSearchTerm('');
       setClientes([]);
       setError('');
       setSelectedCliente(null);
+      setSelectedIndex(-1);
       setTabValue(0);
+      setTimeout(() => busquedaRef.current?.focus(), 100);
     }
   }, [open]);
 
@@ -122,6 +189,7 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
+      onKeyDown={handleKeyDown}
       maxWidth="lg"
       fullWidth
       PaperProps={{
@@ -131,8 +199,8 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
         }
       }}
     >
-      <DialogTitle sx={{ 
-        backgroundColor: '#f5f5f5', 
+      <DialogTitle sx={{
+        backgroundColor: '#f5f5f5',
         borderBottom: '1px solid #ddd',
         display: 'flex',
         justifyContent: 'space-between',
@@ -152,7 +220,7 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      
+
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
@@ -168,14 +236,13 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
             <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
               <TextField
                 fullWidth
-                label="Buscar cliente por nombre"
+                label="Buscar cliente por nombre (↑↓ Enter)"
                 size="small"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
                 placeholder="Ingrese el nombre del cliente"
                 disabled={isSearching}
-                autoFocus
+                inputRef={busquedaRef}
               />
               <Button
                 variant="contained"
@@ -196,22 +263,28 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
 
             {/* Lista de clientes */}
             {clientes.length > 0 && (
-              <TableContainer component={Paper} elevation={0} sx={{ maxHeight: 400 }}>
+              <TableContainer component={Paper} elevation={0} sx={{ maxHeight: 400 }} ref={tableContainerRef}>
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Nombre del Cliente</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>RUC</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>ID</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>Nombre del Cliente</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>RUC</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {clientes.map((cliente) => (
+                    {clientes.map((cliente, index) => (
                       <TableRow
                         key={cliente.idCliente}
                         onClick={() => handleRowClick(cliente)}
-                        hover
-                        sx={{ cursor: 'pointer' }}
+                        selected={index === selectedIndex}
+                        sx={{
+                          cursor: 'pointer',
+                          backgroundColor: index === selectedIndex ? '#c8e6c9 !important' : undefined,
+                          '&:hover': {
+                            backgroundColor: index === selectedIndex ? '#c8e6c9' : '#e8f5e9',
+                          },
+                        }}
                       >
                         <TableCell>{cliente.idCliente}</TableCell>
                         <TableCell>{cliente.nombreCliente}</TableCell>

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  TextField,
   MenuItem,
   FormControl,
   InputLabel,
@@ -11,6 +10,7 @@ import {
   Paper,
   Autocomplete,
 } from '@mui/material';
+import TextField from '../UppercaseTextField';
 import type { Persona } from '../../types/persona.types';
 import type { Departamento, Distrito, Ciudad } from '../../types/ubicacion.types';
 import { TipoPersonaForm } from './TipoPersonaForm';
@@ -53,7 +53,7 @@ export default function PersonaForm({ formData, setFormData }: PersonaFormProps)
         setLoading(true);
         const data = await ubicacionService.obtenerDepartamentos();
         setDepartamentos(data);
-        
+
         // Establecer valores por defecto solo si es un nuevo registro
         if (!formData.idPersona && !valoresPorDefectoCargados) {
           // Buscar Itapúa en los departamentos
@@ -84,7 +84,7 @@ export default function PersonaForm({ formData, setFormData }: PersonaFormProps)
           setLoading(true);
           const data = await ubicacionService.obtenerDistritosPorDepartamento(formData.idDepartamento);
           setDistritos(data);
-          
+
           // Establecer Encarnación por defecto solo si es un nuevo registro y no tiene distrito
           if (!formData.idPersona && !formData.idDistrito && valoresPorDefectoCargados) {
             const encarnacion = data.find(d => d.nombre.toUpperCase().includes('ENCARNA'));
@@ -119,7 +119,7 @@ export default function PersonaForm({ formData, setFormData }: PersonaFormProps)
           setLoading(true);
           const data = await ubicacionService.obtenerCiudadesPorDistrito(formData.idDistrito);
           setCiudades(data);
-          
+
           // Establecer Encarnación por defecto solo si es un nuevo registro y no tiene ciudad
           if (!formData.idPersona && !formData.idCiudad && valoresPorDefectoCargados) {
             const encarnacion = data.find(c => c.nombreCiudad.toUpperCase().includes('ENCARNA'));

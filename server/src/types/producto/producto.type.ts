@@ -4,10 +4,11 @@ export interface InsertarProductoRequest {
   codigo?: number;
   codigoBarra?: string;
   precio?: number;
-  costo?: number;
+  origen?: boolean;
   idUsuarioAlta?: number;
   idTipoProducto?: number;
   gasto?: boolean;
+  activo?: boolean;
   idImpuesto?: number;
 }
 
@@ -29,7 +30,7 @@ export interface ModificarProductoRequest {
   codigo?: number;
   codigoBarra?: string;
   precio?: number;
-  costo?: number;
+  origen?: number;
   idUsuarioMod: number;
   idTipoProducto?: number;
   gasto?: boolean;

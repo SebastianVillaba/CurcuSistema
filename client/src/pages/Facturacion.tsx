@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
-  TextField,
   Button,
   Typography,
   Grid,
@@ -22,6 +21,7 @@ import {
   CardContent,
   Stack,
 } from '@mui/material';
+import TextField from '../components/UppercaseTextField';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import SearchIcon from '@mui/icons-material/Search';
@@ -496,7 +496,7 @@ const Facturacion: React.FC = () => {
       nombre: clienteData.nombreCliente,
       direccion: clienteData.direccion || '',
       telefono: clienteData.celular || '',
-      documento: clienteData.ruc.split('-')[0] || '',
+      documento: clienteData.ruc || '',
       dv: clienteData.dv || ''
     };
     setCliente(nuevoCliente);

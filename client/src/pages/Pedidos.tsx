@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Paper,
-  TextField,
   Button,
   Typography,
   Grid,
@@ -20,6 +19,7 @@ import {
   Stack,
   Divider,
 } from '@mui/material';
+import TextField from '../components/UppercaseTextField';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
@@ -37,6 +37,9 @@ import type { Cliente, FiltroPedidos } from '../types/pedido.types';
 import type { DatosTicketPedido, ItemTicketPedido } from '../types/ticket.types';
 import { ticketService } from '../services/ticket.service';
 import RequirePermission from '../components/RequirePermission';
+import { deliveryService } from '../services/delivery.service';
+import type { TipoCobro } from '../services/pedido.service';
+import ClearIcon from '@mui/icons-material/Clear';
 
 const Pedidos: React.FC = () => {
   // Estados principales
@@ -49,9 +52,13 @@ const Pedidos: React.FC = () => {
     documento: '',
     dv: '',
   });
+  // Listas para los selects
+  const [deliveryList, setDeliveryList] = useState<any[]>([]);
+  const [tipoCobroList, setTipoCobroList] = useState<TipoCobro[]>([]);
+  // Valores seleccionados
+  const [deliverySeleccionado, setDeliverySeleccionado] = useState<number | ''>('');
+  const [tipoCobroSeleccionado, setTipoCobroSeleccionado] = useState<number | ''>('');
   const [items, setItems] = useState<DetallePedido[]>([]);
-  const [delivery, setDelivery] = useState('');
-  const [tipoPago, setTipoPago] = useState('');
   const [nroPedido, setNroPedido] = useState('');
 
   // Estados para búsqueda de productos
@@ -60,15 +67,19 @@ const Pedidos: React.FC = () => {
   const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoResultado | null>(null);
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState<number>(1);
 
+  // Refs para manejo de foco
+  const cantidadInputRef = useRef<HTMLInputElement>(null);
+  const agregarButtonRef = useRef<HTMLButtonElement>(null);
+  const busquedaProductoRef = useRef<HTMLInputElement>(null);
+  // Refs para flujo de foco
+  const deliverySelectRef = useRef<HTMLSelectElement>(null);
+  const tipoCobroSelectRef = useRef<HTMLSelectElement>(null);
+  const guardarButtonRef = useRef<HTMLButtonElement>(null);
+  const nuevoButtonRef = useRef<HTMLButtonElement>(null);
+
   // Estados para lista de pedidos del día
   const [pedidosDelDia, setPedidosDelDia] = useState<PedidoDia[]>([]);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoDia | null>(null);
-  const [filtros, setFiltros] = useState<FiltroPedidos>({
-    fecha: new Date().toISOString().split('T')[0],
-    cliente: '',
-    tipoCobro: '',
-    estadoCobranza: '',
-  });
 
   // Modal de búsqueda de cliente
   const [openClienteModal, setOpenClienteModal] = useState(false);
@@ -85,9 +96,36 @@ const Pedidos: React.FC = () => {
     }
   }, [idTerminalWeb]);
 
+  const consultarTipoCobro = useCallback(async () => {
+    try {
+      const result = await pedidoService.consultaTipoCobro();
+      console.log(result);
+      setTipoCobroList(result);
+    } catch (error: any) {
+      console.error(error);
+    }
+  }, []);
+
+  const consultarDelivery = useCallback(async () => {
+    try {
+      const result = await deliveryService.getDeliveryActivo();
+      setDeliveryList(result);
+    } catch (error: any) {
+      console.error(error);
+    }
+  }, []);
+
   useEffect(() => {
     consultarDetalle();
   }, [consultarDetalle]);
+
+  useEffect(() => {
+    consultarDelivery();
+  }, [consultarDelivery]);
+
+  useEffect(() => {
+    consultarTipoCobro();
+  }, [consultarTipoCobro])
 
   // Calcular totales
   const calcularTotales = () => {
@@ -97,21 +135,8 @@ const Pedidos: React.FC = () => {
 
   const totales = calcularTotales();
 
-  // Atajo de teclado Alt+C para abrir modal de cliente
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.altKey && event.key.toLowerCase() === 'c') {
-        event.preventDefault();
-        setOpenClienteModal(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   // Handlers
-  const handleNuevo = () => {
+  const handleNuevo = useCallback(() => {
     setNroPedido('');
     setCliente({
       nombre: '',
@@ -121,17 +146,46 @@ const Pedidos: React.FC = () => {
       dv: '',
     });
     setItems([]);
-    setDelivery('');
-    setTipoPago('');
+    setDeliverySeleccionado('');
+    setTipoCobroSeleccionado('');
     setTerminoBusqueda('');
     setPedidoSeleccionado(null);
     setProductoSeleccionado(null);
     setCantidadSeleccionada(1);
+    // Mover foco al campo de búsqueda de productos
+    setTimeout(() => busquedaProductoRef.current?.focus(), 100);
+  }, []);
+
+  const handleBuscarPedidos = useCallback(async () => {
+    if (idTerminalWeb) {
+      try {
+        const data = await pedidoService.consultarPedidosDia(idTerminalWeb);
+        setPedidosDelDia(data);
+        setPedidoSeleccionado((current) => {
+          if (!current) return null;
+          const stillExists = data.some(
+            (pedido) =>
+              pedido.idPedido === current.idPedido && pedido.nro === current.nro
+          );
+          return stillExists ? current : null;
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }, [idTerminalWeb]);
+
+  useEffect(() => {
+    handleBuscarPedidos();
+  }, [handleBuscarPedidos]);
+
+  const handleSeleccionarPedido = (pedido: PedidoDia) => {
+    setPedidoSeleccionado(pedido);
   };
 
 
   // Funcion para guardar el pedido 
-  const handleGuardar = async () => {
+  const handleGuardar = useCallback(async () => {
     // Pregunto si es que tengo un cliente o una terminal asignados
     if (!idTerminalWeb || !cliente.idCliente) {
       alert('Debe seleccionar un cliente y tener una terminal asignada.');
@@ -142,9 +196,9 @@ const Pedidos: React.FC = () => {
       idTerminalWeb,
       idPedidoExistente: 0, // TODO: handle existing order
       idEstadoCobro: 1, // TODO: map from tipoPago
-      idTipoCobro: 1, // TODO: map from tipoPago
+      idTipoCobro: tipoCobroSeleccionado as number,
       idCliente: cliente.idCliente,
-      idDelivery: delivery === 'SI' ? 1 : 0, // TODO: map from delivery
+      idDelivery: deliverySeleccionado as number,
       direccion: cliente.direccion || '',
     };
     try {
@@ -152,11 +206,40 @@ const Pedidos: React.FC = () => {
       alert('Pedido guardado correctamente');
       handleNuevo();
       handleBuscarPedidos();
+      // Mover foco al botón Nuevo
+      setTimeout(() => nuevoButtonRef.current?.focus(), 100);
     } catch (error) {
       console.error(error);
       alert('Error al guardar el pedido');
     }
-  };
+  }, [idTerminalWeb, cliente, tipoCobroSeleccionado, deliverySeleccionado, handleNuevo, handleBuscarPedidos]);
+
+  // Atajos de teclado F1-F4
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      switch (event.key) {
+        case 'F1':
+          event.preventDefault();
+          setOpenProductModal(true);
+          break;
+        case 'F2':
+          event.preventDefault();
+          setOpenClienteModal(true);
+          break;
+        case 'F3':
+          event.preventDefault();
+          handleNuevo();
+          break;
+        case 'F4':
+          event.preventDefault();
+          handleGuardar();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNuevo, handleGuardar]);
 
   const handleImprimir = async () => {
     if (!pedidoSeleccionado) {
@@ -213,6 +296,13 @@ const Pedidos: React.FC = () => {
   const handleSelectProduct = (producto: ProductoResultado) => {
     setProductoSeleccionado(producto);
     setCantidadSeleccionada(1);
+    // Enfocar y seleccionar el campo de cantidad después de seleccionar un producto
+    setTimeout(() => {
+      if (cantidadInputRef.current) {
+        cantidadInputRef.current.focus();
+        cantidadInputRef.current.select();
+      }
+    }, 100);
   };
 
   const handleAgregarProducto = async () => {
@@ -236,6 +326,12 @@ const Pedidos: React.FC = () => {
       setProductoSeleccionado(null);
       setCantidadSeleccionada(1);
       consultarDetalle();
+      // Volver el foco al campo de búsqueda de productos
+      setTimeout(() => {
+        if (busquedaProductoRef.current) {
+          busquedaProductoRef.current.focus();
+        }
+      }, 100);
     } catch (error) {
       console.error(error);
       alert('No se pudo agregar el producto al pedido');
@@ -255,32 +351,7 @@ const Pedidos: React.FC = () => {
     }
   };
 
-  const handleBuscarPedidos = useCallback(async () => {
-    if (idTerminalWeb) {
-      try {
-        const data = await pedidoService.consultarPedidosDia(idTerminalWeb);
-        setPedidosDelDia(data);
-        setPedidoSeleccionado((current) => {
-          if (!current) return null;
-          const stillExists = data.some(
-            (pedido) =>
-              pedido.idPedido === current.idPedido && pedido.nro === current.nro
-          );
-          return stillExists ? current : null;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    }
-  }, [idTerminalWeb]);
 
-  useEffect(() => {
-    handleBuscarPedidos();
-  }, [handleBuscarPedidos]);
-
-  const handleSeleccionarPedido = (pedido: PedidoDia) => {
-    setPedidoSeleccionado(pedido);
-  };
 
   // Handler para cuando se selecciona un cliente en el modal
   const handleClienteSelected = (clienteData: any) => {
@@ -289,10 +360,12 @@ const Pedidos: React.FC = () => {
       nombre: clienteData.nombreCliente,
       direccion: clienteData.direccion || '',
       telefono: clienteData.celular || '',
-      documento: clienteData.ruc.split('-')[0] || '',
+      documento: clienteData.ruc || '',
       dv: clienteData.dv || '',
     };
     setCliente(nuevoCliente);
+    // Mover foco al select de Delivery
+    setTimeout(() => deliverySelectRef.current?.focus(), 100);
   };
 
   return (
@@ -301,12 +374,13 @@ const Pedidos: React.FC = () => {
         {/* Botones de Acción */}
         <Stack direction="row" spacing={1} sx={{ height: '5vh', mb: 2 }} >
           <Button
+            ref={nuevoButtonRef}
             variant="contained"
             color="success"
             startIcon={<AddIcon />}
             onClick={handleNuevo}
           >
-            Nuevo
+            Nuevo (F3)
           </Button>
           <Button
             variant="contained"
@@ -318,12 +392,13 @@ const Pedidos: React.FC = () => {
             Imprimir
           </Button>
           <Button
+            ref={guardarButtonRef}
             variant="contained"
             color="primary"
             startIcon={<SaveIcon />}
             onClick={handleGuardar}
           >
-            Guardar
+            Guardar (F4)
           </Button>
           <Button
             variant="contained"
@@ -348,7 +423,7 @@ const Pedidos: React.FC = () => {
                   <TextField
                     fullWidth
                     size="small"
-                    label="Buscar producto (Alt+P)"
+                    label="Buscar producto (F1)"
                     value={terminoBusqueda}
                     onChange={(e) => setTerminoBusqueda(e.target.value)}
                     onKeyPress={(e) => {
@@ -356,6 +431,7 @@ const Pedidos: React.FC = () => {
                         handleBuscarProducto();
                       }
                     }}
+                    inputRef={busquedaProductoRef}
                   />
                   <Button
                     variant="contained"
@@ -369,36 +445,49 @@ const Pedidos: React.FC = () => {
                 {/* Detalle del Producto Seleccionado */}
                 <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f5f5f5' }}>
                   {productoSeleccionado ? (
-                    <Stack spacing={1}>
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        {productoSeleccionado.nombreMercaderia}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Código: {productoSeleccionado.codigo}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Precio: {productoSeleccionado.precio.toLocaleString('es-PY')} Gs.
-                      </Typography>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <TextField
-                          label="Cantidad"
-                          type="number"
-                          size="small"
-                          value={cantidadSeleccionada}
-                          onChange={(e) => setCantidadSeleccionada(Number(e.target.value) || 0)}
-                          inputProps={{ min: 0.01, step: 1 }}
-                          sx={{ width: 140 }}
-                        />
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          startIcon={<AddIcon />}
-                          onClick={handleAgregarProducto}
-                        >
-                          Agregar
-                        </Button>
+                    <>
+                      <Stack spacing={1}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography variant="subtitle1" fontWeight="bold" >
+                            {productoSeleccionado.nombreMercaderia}
+                          </Typography>
+                          <ClearIcon onClick={() => setProductoSeleccionado(null)} sx={{ cursor: 'pointer' }} />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Código: {productoSeleccionado.codigo}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Precio: {productoSeleccionado.precio.toLocaleString('es-PY')} Gs.
+                        </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <TextField
+                            label="Cantidad"
+                            type="number"
+                            size="small"
+                            value={cantidadSeleccionada}
+                            onChange={(e) => setCantidadSeleccionada(Number(e.target.value) || 0)}
+                            inputProps={{ min: 0.01, step: 1 }}
+                            sx={{ width: 140 }}
+                            inputRef={cantidadInputRef}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                agregarButtonRef.current?.focus();
+                              }
+                            }}
+                          />
+                          <Button
+                            ref={agregarButtonRef}
+                            variant="contained"
+                            color="primary"
+                            startIcon={<AddIcon />}
+                            onClick={handleAgregarProducto}
+                          >
+                            Agregar
+                          </Button>
+                        </Stack>
                       </Stack>
-                    </Stack>
+                    </>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
                       Seleccione un producto para ver los detalles
@@ -452,7 +541,7 @@ const Pedidos: React.FC = () => {
               {/* Formulario del Cliente */}
               <Box sx={{ mt: 'auto' }}>
                 <Typography variant="h6" gutterBottom>
-                  Datos del Cliente (Alt+C)
+                  Datos del Cliente (F2)
                 </Typography>
                 {/* Formulario del cliente */}
                 <Grid container spacing={2}>
@@ -520,13 +609,22 @@ const Pedidos: React.FC = () => {
                         <FormControl fullWidth size="small">
                           <InputLabel>Delivery</InputLabel>
                           <Select
-                            value={delivery}
+                            inputRef={deliverySelectRef}
+                            value={deliverySeleccionado}
                             label="Delivery"
-                            onChange={(e) => setDelivery(e.target.value)}
+                            onChange={(e) => {
+                              setDeliverySeleccionado(e.target.value as number);
+                              // Mover foco al select de Tipo de Pago
+                              setTimeout(() => tipoCobroSelectRef.current?.focus(), 100);
+                            }}
                           >
-                            <MenuItem value="">Seleccione...</MenuItem>
-                            <MenuItem value="SI">Sí</MenuItem>
-                            <MenuItem value="NO">No</MenuItem>
+                            {
+                              deliveryList.map((item: any) => (
+                                <MenuItem key={item.idDelivery} value={item.idDelivery}>
+                                  {item.nombreDelivery}
+                                </MenuItem>
+                              ))
+                            }
                           </Select>
                         </FormControl>
                       </Grid>
@@ -534,15 +632,22 @@ const Pedidos: React.FC = () => {
                         <FormControl fullWidth size="small">
                           <InputLabel>Tipo de Pago</InputLabel>
                           <Select
-                            value={tipoPago}
+                            inputRef={tipoCobroSelectRef}
+                            value={tipoCobroSeleccionado}
                             label="Tipo de Pago"
-                            onChange={(e) => setTipoPago(e.target.value)}
+                            onChange={(e) => {
+                              setTipoCobroSeleccionado(e.target.value as number);
+                              // Mover foco al botón Guardar
+                              setTimeout(() => guardarButtonRef.current?.focus(), 100);
+                            }}
                           >
-                            <MenuItem value="">Seleccione...</MenuItem>
-                            <MenuItem value="EFECTIVO">Efectivo</MenuItem>
-                            <MenuItem value="TARJETA">Tarjeta</MenuItem>
-                            <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-                            <MenuItem value="CREDITO">Crédito</MenuItem>
+                            {
+                              tipoCobroList.map((item: TipoCobro) => (
+                                <MenuItem key={item.idTipoCobro} value={item.idTipoCobro}>
+                                  {item.nombreTipo}
+                                </MenuItem>
+                              ))
+                            }
                           </Select>
                         </FormControl>
                       </Grid>

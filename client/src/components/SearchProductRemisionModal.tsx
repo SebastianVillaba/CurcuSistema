@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -13,9 +13,9 @@ import {
     IconButton,
     Typography,
     Box,
-    TextField,
     Alert,
 } from '@mui/material';
+import TextField from './UppercaseTextField';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import { remisionService } from '../services/remision.service';
@@ -49,6 +49,54 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
     const [productos, setProductos] = useState<ProductoRemisionResultado[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [error, setError] = useState('');
+    const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+
+    const busquedaRef = useRef<HTMLInputElement>(null);
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+    // Ref para mantener referencia actualizada
+    const productosRef = useRef<ProductoRemisionResultado[]>([]);
+    const selectedIndexRef = useRef<number>(-1);
+
+    // Mantener productosRef sincronizado
+    useEffect(() => {
+        productosRef.current = productos;
+    }, [productos]);
+
+    useEffect(() => {
+        selectedIndexRef.current = selectedIndex;
+    }, [selectedIndex]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        const currentProductos = productosRef.current;
+
+        // Si no hay productos, solo permitir Enter para buscar
+        if (currentProductos.length === 0) {
+            if (e.key === 'Enter' && searchTerm.trim()) {
+                e.preventDefault();
+                handleSearch();
+            }
+            return;
+        }
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setSelectedIndex((prev) => (prev < currentProductos.length - 1 ? prev + 1 : prev));
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+                break;
+            case 'Enter':
+                e.preventDefault();
+                const currentIndex = selectedIndexRef.current;
+                if (currentIndex >= 0 && currentIndex < currentProductos.length) {
+                    onSelectProduct(currentProductos[currentIndex]);
+                    onClose();
+                }
+                break;
+        }
+    }, [onSelectProduct, onClose, searchTerm]);
 
     const handleSearch = async (term?: string) => {
         const query = term?.trim() ?? searchTerm?.trim();
@@ -56,6 +104,7 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
         if (!query) {
             setProductos([]);
             setError('');
+            setSelectedIndex(-1);
             return;
         }
 
@@ -70,7 +119,10 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
                 onClose();
             } else {
                 setProductos(results);
-                if (results.length === 0) {
+                if (results.length > 0) {
+                    setSelectedIndex(0);
+                } else {
+                    setSelectedIndex(-1);
                     setError('No se encontraron productos');
                 }
             }
@@ -78,16 +130,29 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
             console.error('Error al buscar productos:', error);
             setError(error.message || 'Error al buscar productos');
             setProductos([]);
+            setSelectedIndex(-1);
         } finally {
             setIsSearching(false);
         }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter') {
-            handleSearch();
+    // Auto-scroll cuando cambia la selección
+    useEffect(() => {
+        if (selectedIndex >= 0 && tableContainerRef.current) {
+            const container = tableContainerRef.current;
+            const rows = container.querySelectorAll('tbody tr');
+            const selectedRow = rows[selectedIndex] as HTMLElement;
+
+            if (selectedRow) {
+                const containerRect = container.getBoundingClientRect();
+                const rowRect = selectedRow.getBoundingClientRect();
+
+                if (rowRect.bottom > containerRect.bottom || rowRect.top < containerRect.top) {
+                    selectedRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
         }
-    };
+    }, [selectedIndex]);
 
     const handleRowClick = (producto: ProductoRemisionResultado) => {
         onSelectProduct(producto);
@@ -101,10 +166,13 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
             setSearchTerm(initialTerm);
             setProductos([]);
             setError('');
+            setSelectedIndex(-1);
 
             if (initialTerm) {
                 handleSearch(initialTerm);
             }
+
+            setTimeout(() => busquedaRef.current?.focus(), 100);
         }
     }, [open, busqueda]);
 
@@ -112,6 +180,7 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
         <Dialog
             open={open}
             onClose={onClose}
+            onKeyDown={handleKeyDown}
             maxWidth="lg"
             fullWidth
             PaperProps={{
@@ -130,7 +199,7 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
                 py: 1.5
             }}>
                 <Typography variant="h6" component="div">
-                    Búsqueda de Productos (Remisión)
+                    Búsqueda de Productos - Remisión (↑↓ Enter)
                 </Typography>
                 <IconButton
                     edge="end"
@@ -152,9 +221,9 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
                         size="small"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyPress={handleKeyPress}
                         placeholder="Ingrese código, código de barra o nombre del producto"
                         disabled={isSearching}
+                        inputRef={busquedaRef}
                     />
                     <IconButton
                         color="primary"
@@ -182,7 +251,7 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
                 )}
 
                 {productos.length > 0 && (
-                    <TableContainer component={Paper} elevation={0}>
+                    <TableContainer component={Paper} elevation={0} ref={tableContainerRef}>
                         <Table size="small" stickyHeader>
                             <TableHead>
                                 <TableRow>
@@ -197,11 +266,19 @@ const SearchProductRemisionModal: React.FC<SearchProductRemisionModalProps> = ({
                                     <TableRow
                                         key={producto.idProducto || index}
                                         onClick={() => handleRowClick(producto)}
+                                        selected={index === selectedIndex}
                                         sx={{
                                             cursor: 'pointer',
-                                            '&:hover': { backgroundColor: '#c8e6c9' },
-                                            '&:nth-of-type(even)': { backgroundColor: '#f9f9f9' },
-                                            '&:nth-of-type(even):hover': { backgroundColor: '#c8e6c9' },
+                                            backgroundColor: index === selectedIndex ? '#c8e6c9 !important' : undefined,
+                                            '&:hover': {
+                                                backgroundColor: index === selectedIndex ? '#c8e6c9' : '#e8f5e9',
+                                            },
+                                            '&:nth-of-type(even)': {
+                                                backgroundColor: index === selectedIndex ? '#c8e6c9' : '#f9f9f9',
+                                            },
+                                            '&:nth-of-type(even):hover': {
+                                                backgroundColor: index === selectedIndex ? '#c8e6c9' : '#e8f5e9',
+                                            },
                                         }}
                                     >
                                         <TableCell>{producto.codigo}</TableCell>

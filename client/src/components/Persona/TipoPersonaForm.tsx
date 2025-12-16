@@ -1,12 +1,12 @@
-import { 
-    Divider, 
-    FormControlLabel, 
-    Stack, 
-    TextField,
+import {
+    Divider,
+    FormControlLabel,
+    Stack,
     Typography,
     Checkbox,
     Box
 } from '@mui/material';
+import TextField from '../UppercaseTextField';
 import type { Persona } from '../../types/persona.types';
 
 /**
@@ -25,7 +25,7 @@ interface TipoPersonaFormProps {
  * - Cliente: requiere código (opcional, se autogenera si es 0)
  */
 export const TipoPersonaForm = ({ formData, setFormData }: TipoPersonaFormProps) => {
-    
+
     /**
      * Función helper para manejar cambios en los campos del formulario
      */
@@ -51,11 +51,11 @@ export const TipoPersonaForm = ({ formData, setFormData }: TipoPersonaFormProps)
     };
 
     return (
-        <Box sx={{  }}>
+        <Box sx={{}}>
             <Typography variant="h6" gutterBottom>
                 Tipo de Persona
             </Typography>
-            
+
             {/* Checkboxes para seleccionar los tipos de persona */}
             <Stack direction="row" spacing={3} sx={{ mb: 2 }}>
                 <FormControlLabel
@@ -130,7 +130,7 @@ export const TipoPersonaForm = ({ formData, setFormData }: TipoPersonaFormProps)
                             error={formData.tipoPersonaJur && !formData.nombreFantasia}
                             helperText={formData.tipoPersonaJur && !formData.nombreFantasia ? 'Campo obligatorio para Persona Jurídica' : ''}
                         />
-                        
+
                         {/* Checkbox para marcar como Proveedor */}
                         <FormControlLabel
                             control={

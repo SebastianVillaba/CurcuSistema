@@ -10,7 +10,6 @@ import {
   Paper,
   Grid,
   Collapse,
-  TextField,
   CircularProgress,
   Table,
   TableBody,
@@ -19,6 +18,7 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
+import TextField from './UppercaseTextField';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';

@@ -4,7 +4,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Button,
   Stack,
   Alert,
@@ -16,6 +15,7 @@ import {
   MenuItem,
   Autocomplete,
 } from '@mui/material';
+import TextField from '../components/UppercaseTextField';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { personaService } from '../services/persona.service';
@@ -67,10 +67,10 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   // TODO: Obtener idUsuario del contexto de autenticación
   const idUsuario = 1; // Temporal
-  
+
   // Estados para ubicación
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [distritos, setDistritos] = useState<Distrito[]>([]);
@@ -109,7 +109,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     try {
       const data = await ubicacionService.obtenerDepartamentos();
       setDepartamentos(data);
-      
+
       // Establecer Itapúa por defecto
       const itapua = data.find(d => d.nombre.toUpperCase().includes('ITAP'));
       if (itapua) {
@@ -124,7 +124,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     try {
       const data = await ubicacionService.obtenerDistritosPorDepartamento(idDep);
       setDistritos(data);
-      
+
       // Establecer Encarnación por defecto
       const encarnacion = data.find(d => d.nombre.toUpperCase().includes('ENCARNA'));
       if (encarnacion) {
@@ -139,7 +139,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     try {
       const data = await ubicacionService.obtenerCiudadesPorDistrito(idDist);
       setCiudades(data);
-      
+
       // Establecer Encarnación por defecto
       const encarnacion = data.find(c => c.nombreCiudad.toUpperCase().includes('ENCARNA'));
       if (encarnacion) {
@@ -167,14 +167,14 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
 
     try {
       const resultado = await personaService.buscarClientePorRuc(ruc, idUsuario);
-      
+
       if (resultado && resultado.length > 0) {
         const cliente = resultado[0];
-        
+
         // Guardar el idCliente
         setIdPersona(cliente.idCliente);
         setClienteEncontrado(true);
-        
+
         // Llenar los campos con la información encontrada
         setNombre(cliente.nombre || '');
         setApellido(cliente.apellido || '');
@@ -183,17 +183,17 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         setTelefono(cliente.telefono || '');
         setCelular(cliente.celular || '');
         setEmail(cliente.email || '');
-        
+
         // Establecer ubicación
         if (cliente.idDepartamento) setIdDepartamento(cliente.idDepartamento);
         if (cliente.idDistrito) setIdDistrito(cliente.idDistrito);
         if (cliente.idCiudad) setIdCiudad(cliente.idCiudad.toString());
-        
+
         if (cliente.fechaNacimiento) {
           const fecha = new Date(cliente.fechaNacimiento);
           setFechaNacimiento(fecha.toISOString().split('T')[0]);
         }
-        
+
         // Seleccionar automáticamente el cliente encontrado
         const clienteData: ClienteData = {
           idPersona: cliente.idCliente,
@@ -210,7 +210,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
           email: cliente.email,
           fechaNacimiento: cliente.fechaNacimiento
         };
-        
+
         onClienteSelected(clienteData);
         handleCancelar();
       } else {
@@ -238,12 +238,12 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
       setError('El nombre es obligatorio');
       return;
     }
-    
+
     if (!apellido.trim()) {
       setError('El apellido es obligatorio');
       return;
     }
-    
+
     if (!idCiudad) {
       setError('Debe seleccionar una ciudad');
       return;
@@ -266,7 +266,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         email,
         fechaNacimiento,
       };
-      
+
       onClienteSelected(clienteData);
       handleCancelar();
       return;
@@ -275,7 +275,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     // Si no fue encontrado, agregar nuevo cliente
     setLoading(true);
     setError('');
-    
+
     try {
       const nuevoCliente = await personaService.agregarClienteRapido({
         ruc,
@@ -289,7 +289,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         idCiudad: parseInt(idCiudad),
         idUsuarioAlta: idUsuario
       });
-      
+
       // Seleccionar el cliente recién creado
       const clienteData: ClienteData = {
         idPersona: nuevoCliente.idCliente,
@@ -306,7 +306,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         email,
         fechaNacimiento,
       };
-      
+
       onClienteSelected(clienteData);
       handleCancelar();
       onSuccess?.();

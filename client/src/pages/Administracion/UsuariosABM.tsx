@@ -3,7 +3,6 @@ import {
     Box,
     Paper,
     Typography,
-    TextField,
     Button,
     List,
     ListItem,
@@ -14,6 +13,7 @@ import {
     Alert,
     CircularProgress,
 } from '@mui/material';
+import TextField from '../../components/UppercaseTextField';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';

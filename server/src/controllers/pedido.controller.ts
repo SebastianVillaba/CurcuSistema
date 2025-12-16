@@ -123,4 +123,16 @@ export const consultaPedidosDia = async (req: Request, res: Response) => {
     }
 };
 
+export const consultaTipoCobro = async (req: Request, res: Response) => {
+    try {
+        const result = await executeRequest({
+            query: 'select idTipoCobro,nombreTipo from v_tipoCobro',
+            isStoredProcedure: false
+        });
+        res.status(200).json(result.recordset);
+    } catch (error:any) {
+        console.error('Error al consultar los tipos de cobro:', error);
+        res.status(500).json({ message: 'Error al consultar los tipos de cobro', error: error.message });
+    }
+}
 

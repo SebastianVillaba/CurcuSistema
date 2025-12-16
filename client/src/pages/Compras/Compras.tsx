@@ -3,7 +3,6 @@ import {
     Box,
     Paper,
     Typography,
-    TextField,
     Button,
     Table,
     TableBody,
@@ -14,6 +13,7 @@ import {
     Grid,
     IconButton,
 } from '@mui/material';
+import TextField from '../../components/UppercaseTextField';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';

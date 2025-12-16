@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     Box,
     Paper,
-    TextField,
     Button,
     Typography,
     Grid,
@@ -20,6 +19,7 @@ import {
     Checkbox,
     FormControlLabel
 } from '@mui/material';
+import TextField from '../../components/UppercaseTextField';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';

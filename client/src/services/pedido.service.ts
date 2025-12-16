@@ -44,6 +44,11 @@ export interface DetallePedido {
     nombreImpuesto: string;
     nro: number;
 }
+
+export interface TipoCobro {
+    idTipoCobro: number;
+    nombreTipo: string;
+}
 //#region Interfaces
 
 export const pedidoService = {
@@ -107,6 +112,15 @@ export const pedidoService = {
         } catch (error: any) {
             console.error('Error al consultar los pedidos del día:', error);
             throw new Error(error.response?.data?.message || 'Error al consultar los pedidos del día');
+        }
+    },
+    consultaTipoCobro: async (): Promise<TipoCobro[]> => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/pedido/tipoCobro`);
+            return response.data;
+        } catch (error: any) {
+            console.error('Error al consultar los tipos de cobro:', error);
+            throw new Error(error.response?.data?.message || 'Error al consultar los tipos de cobro');
         }
     }
 };

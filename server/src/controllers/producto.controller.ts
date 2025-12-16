@@ -19,10 +19,11 @@ export const insertarProducto = async (req: Request, res: Response): Promise<voi
       codigo,
       codigoBarra,
       precio,
-      costo,
       idUsuarioAlta,
       idTipoProducto,
       gasto,
+      origen,
+      activo,
       idImpuesto
     } = req.body as InsertarProductoRequest;
 
@@ -42,11 +43,13 @@ export const insertarProducto = async (req: Request, res: Response): Promise<voi
       { name: 'presentacion', type: sql.VarChar, value: presentacion || '' },
       { name: 'codigo', type: sql.Int, value: codigo || 0 },
       { name: 'codigoBarra', type: sql.VarChar, value: codigoBarra || '' },
-      { name: 'precio', type: sql.Decimal, value: precio || 0 },
-      { name: 'costo', type: sql.Decimal, value: costo || 0 },
+      { name: 'precio', type: sql.Money, value: precio || 0 },
+      // Costo se maneja por Stock Inicial
       { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta },
       { name: 'idTipoProducto', type: sql.Int, value: idTipoProducto || 0 },
       { name: 'gasto', type: sql.Bit, value: gasto || false },
+      { name: 'origen', type: sql.Bit, value: origen || false },
+      { name: 'activo', type: sql.Bit, value: activo !== undefined ? activo : true },
       { name: 'idImpuesto', type: sql.Int, value: idImpuesto || 0 }
     ];
 
@@ -56,34 +59,34 @@ export const insertarProducto = async (req: Request, res: Response): Promise<voi
       isStoredProcedure: true
     });
 
-    // PASO 7: Verificar el resultado y enviar respuesta exitosa
-    const rowsAffected = result.rowsAffected[0];
+// PASO 7: Verificar el resultado y enviar respuesta exitosa
+const rowsAffected = result.rowsAffected[0];
 
-    res.status(201).json({
-      success: true,
-      message: "Producto insertado exitosamente",
-      rowsAffected: rowsAffected
-    } as InsertarProductoResponse);
+res.status(201).json({
+  success: true,
+  message: "Producto insertado exitosamente",
+  rowsAffected: rowsAffected
+} as InsertarProductoResponse);
 
   } catch (error: any) {
-    // Lista de códigos de error de validación del SP
-    const validationErrorCodes = [50000, 50001, 50002, 50003, 50004];
-    // Verificar si es un error personalizado de validación del stored procedure
-    if (validationErrorCodes.includes(error.number)) {
-      // Devolver HTTP 400 Bad Request con el mensaje exacto del RAISERROR
-      res.status(400).json({
-        success: false,
-        message: error.message || "Error de validación en los datos del producto."
-      });
-    } else {
-      // Error genérico del servidor o de la base de datos
-      res.status(500).json({
-        success: false,
-        message: "Error interno del servidor al insertar el producto.",
-        error: error.message
-      });
-    }
+  // Lista de códigos de error de validación del SP
+  const validationErrorCodes = [50000, 50001, 50002, 50003, 50004];
+  // Verificar si es un error personalizado de validación del stored procedure
+  if (validationErrorCodes.includes(error.number)) {
+    // Devolver HTTP 400 Bad Request con el mensaje exacto del RAISERROR
+    res.status(400).json({
+      success: false,
+      message: error.message || "Error de validación en los datos del producto."
+    });
+  } else {
+    // Error genérico del servidor o de la base de datos
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor al insertar el producto.",
+      error: error.message
+    });
   }
+}
 };
 
 /**
@@ -222,79 +225,80 @@ export const consultarPrecioProducto = async (req: Request, res: Response): Prom
     }
   }
 }
-  /**
-   * Controller para modificar un producto existente.
-   */
-  export const modificarProducto = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const {
-        idProducto,
-        nombre,
-        presentacion,
-        codigo,
-        codigoBarra,
-        precio,
-        costo,
-        idUsuarioMod,
-        idTipoProducto,
-        gasto,
-        activo,
-        idImpuesto
-      } = req.body as ModificarProductoRequest;
+/**
+ * Controller para modificar un producto existente.
+ */
+export const modificarProducto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      idProducto,
+      nombre,
+      presentacion,
+      codigo,
+      codigoBarra,
+      precio,
+      origen,
+      idUsuarioMod,
+      idTipoProducto,
+      gasto,
+      activo,
+      idImpuesto
+    } = req.body as ModificarProductoRequest;
 
-      // Validar campos obligatorios
-      if (!idProducto || !nombre || !idUsuarioMod) {
-        res.status(400).json({
-          success: false,
-          message: "Los campos 'idProducto', 'nombre' e 'idUsuarioMod' son obligatorios"
-        });
-        return;
-      }
-
-      const inputs = [
-        { name: 'idProducto', type: sql.Int, value: idProducto },
-        { name: 'nombre', type: sql.VarChar(30), value: nombre },
-        { name: 'presentacion', type: sql.VarChar(30), value: presentacion || '' },
-        { name: 'codigo', type: sql.Int, value: codigo || 0 },
-        { name: 'codigoBarra', type: sql.VarChar(30), value: codigoBarra || '' },
-        { name: 'precio', type: sql.Money, value: precio || 0 },
-        { name: 'costo', type: sql.Money, value: costo || 0 },
-        { name: 'idUsuarioMod', type: sql.Int, value: idUsuarioMod },
-        { name: 'idTipoProducto', type: sql.Int, value: idTipoProducto || 0 },
-        { name: 'gasto', type: sql.Bit, value: gasto || false },
-        { name: 'activo', type: sql.Bit, value: activo !== undefined ? activo : true },
-        { name: 'idImpuesto', type: sql.Int, value: idImpuesto || 0 }
-      ];
-
-      const result = await executeRequest({
-        query: 'sp_modificarProducto',
-        inputs: inputs as any,
-        isStoredProcedure: true
+    // Validar campos obligatorios
+    if (!idProducto || !nombre || !idUsuarioMod) {
+      res.status(400).json({
+        success: false,
+        message: "Los campos 'idProducto', 'nombre' e 'idUsuarioMod' son obligatorios"
       });
+      return;
+    }
 
-      const rowsAffected = result.rowsAffected[0];
+    const inputs = [
+      { name: 'idProducto', type: sql.Int, value: idProducto },
+      { name: 'nombre', type: sql.VarChar(30), value: nombre },
+      { name: 'presentacion', type: sql.VarChar(30), value: presentacion || '' },
+      { name: 'codigo', type: sql.Int, value: codigo || 0 },
+      { name: 'codigoBarra', type: sql.VarChar(30), value: codigoBarra || '' },
+      { name: 'precio', type: sql.Money, value: precio || 0 },
+      // Costo no se edita aqui
+      { name: 'idUsuarioMod', type: sql.Int, value: idUsuarioMod },
+      { name: 'idTipoProducto', type: sql.Int, value: idTipoProducto || 0 },
+      { name: 'gasto', type: sql.Bit, value: gasto || false },
+      { name: 'origen', type: sql.Bit, value: origen !== undefined ? origen : false },
+      { name: 'activo', type: sql.Bit, value: activo !== undefined ? activo : true },
+      { name: 'idImpuesto', type: sql.Int, value: idImpuesto || 0 }
+    ];
 
-      res.status(200).json({
-        success: true,
-        message: "Producto modificado exitosamente",
-        rowsAffected: rowsAffected
+    const result = await executeRequest({
+      query: 'sp_modificarProducto',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    const rowsAffected = result.rowsAffected[0];
+
+    res.status(200).json({
+      success: true,
+      message: "Producto modificado exitosamente",
+      rowsAffected: rowsAffected
+    });
+
+  } catch (error: any) {
+    // Lista de códigos de error de validación del SP
+    const validationErrorCodes = [50000, 50001, 50002, 50003, 50004];
+
+    if (validationErrorCodes.includes(error.number)) {
+      res.status(400).json({
+        success: false,
+        message: error.message || "Error de validación en los datos del producto."
       });
-
-    } catch (error: any) {
-      // Lista de códigos de error de validación del SP
-      const validationErrorCodes = [50000, 50001, 50002, 50003, 50004];
-
-      if (validationErrorCodes.includes(error.number)) {
-        res.status(400).json({
-          success: false,
-          message: error.message || "Error de validación en los datos del producto."
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          message: "Error interno del servidor al modificar el producto.",
-          error: error.message
-        });
-      }
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Error interno del servidor al modificar el producto.",
+        error: error.message
+      });
     }
   }
+}

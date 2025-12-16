@@ -4,7 +4,6 @@ import {
   Box,
   Paper,
   Typography,
-  TextField,
   Button,
   List,
   ListItem,
@@ -20,6 +19,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
+import TextField from '../../components/UppercaseTextField';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -91,6 +91,8 @@ export default function ProductosABM(): JSX.Element {
         idTipoProducto: infoCompleta.idTipoProducto,
         gasto: infoCompleta.gasto || false,
         idImpuesto: infoCompleta.idImpuesto || 0,
+        origen: infoCompleta.origen || false, 
+        activo: infoCompleta.activo || true,
       };
 
       setSelectedProducto(productoMapeado);

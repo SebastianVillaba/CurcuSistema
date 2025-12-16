@@ -1,5 +1,5 @@
 import {
-    TextField,
+    TextField as MuiTextField, // Alias for password field
     MenuItem,
     FormControl,
     InputLabel,
@@ -13,6 +13,7 @@ import {
     InputAdornment,
     IconButton
 } from '@mui/material';
+import TextField from '../UppercaseTextField'; // Custom Uppercase TextField
 import { useState, useEffect } from 'react';
 import SearchIcon from '@mui/icons-material/Search';
 import Visibility from '@mui/icons-material/Visibility';
@@ -111,7 +112,7 @@ export default function UsuarioForm({ formData, setFormData, isNewMode }: Usuari
                 />
 
                 {/* Password */}
-                <TextField
+                <MuiTextField
                     fullWidth
                     label={isNewMode ? "Contraseña" : "Nueva Contraseña (dejar en blanco para mantener)"}
                     type={showPassword ? 'text' : 'password'}

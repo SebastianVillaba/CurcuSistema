@@ -218,6 +218,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       icon: <InventoryIcon />,
       subItems: [
         { text: 'Ajustes', path: '/mercaderia/ajustes', icon: <InventoryIcon /> },
+        { text: 'Stock Inicial', path: '/mercaderia/stock-inicial', icon: <InventoryIcon /> },
       ]
     },
     {

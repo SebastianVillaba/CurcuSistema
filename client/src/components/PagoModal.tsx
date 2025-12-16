@@ -5,11 +5,11 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   Box,
   Typography,
   Paper,
 } from '@mui/material';
+import TextField from './UppercaseTextField';
 
 interface PagoModalProps {
   open: boolean;
@@ -54,10 +54,10 @@ const PagoModal: React.FC<PagoModalProps> = ({
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: {

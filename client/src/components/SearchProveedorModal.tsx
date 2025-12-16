@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Dialog,
     DialogTitle,
     DialogContent,
     Box,
-    TextField,
     Button,
     Table,
     TableBody,
@@ -17,6 +16,7 @@ import {
     Typography,
     Alert,
 } from '@mui/material';
+import TextField from './UppercaseTextField';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import { comprasService } from '../services/compras.service';
@@ -44,12 +44,61 @@ const SearchProveedorModal: React.FC<SearchProveedorModalProps> = ({
     const [proveedores, setProveedores] = useState<ProveedorResultado[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [error, setError] = useState('');
+    const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+
+    const busquedaRef = useRef<HTMLInputElement>(null);
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+    // Ref para mantener referencia actualizada
+    const proveedoresRef = useRef<ProveedorResultado[]>([]);
+    const selectedIndexRef = useRef<number>(-1);
+
+    // Mantener proveedoresRef sincronizado
+    useEffect(() => {
+        proveedoresRef.current = proveedores;
+    }, [proveedores]);
+
+    useEffect(() => {
+        selectedIndexRef.current = selectedIndex;
+    }, [selectedIndex]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        const currentProveedores = proveedoresRef.current;
+
+        // Si no hay proveedores, solo permitir Enter para buscar
+        if (currentProveedores.length === 0) {
+            if (e.key === 'Enter' && searchTerm.trim()) {
+                e.preventDefault();
+                handleSearch();
+            }
+            return;
+        }
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setSelectedIndex((prev) => (prev < currentProveedores.length - 1 ? prev + 1 : prev));
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+                break;
+            case 'Enter':
+                e.preventDefault();
+                const currentIndex = selectedIndexRef.current;
+                if (currentIndex >= 0 && currentIndex < currentProveedores.length) {
+                    onProveedorSelected(currentProveedores[currentIndex]);
+                    onClose();
+                }
+                break;
+        }
+    }, [onProveedorSelected, onClose, searchTerm]);
 
     // Para buscar el proveedor
     const handleSearch = async () => {
         if (!searchTerm.trim()) {
             setProveedores([]);
             setError('');
+            setSelectedIndex(-1);
             return;
         }
 
@@ -62,23 +111,39 @@ const SearchProveedorModal: React.FC<SearchProveedorModalProps> = ({
             setProveedores(results);
             console.log(results);
 
-            if (results.length === 0) {
+            if (results.length > 0) {
+                setSelectedIndex(0);
+            } else {
+                setSelectedIndex(-1);
                 setError('No se encontraron proveedores');
             }
         } catch (error: any) {
             console.error('Error al buscar proveedores:', error);
             setError(error.message || 'Error al buscar proveedores');
             setProveedores([]);
+            setSelectedIndex(-1);
         } finally {
             setIsSearching(false);
         }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter') {
-            handleSearch();
+    // Auto-scroll cuando cambia la selección
+    useEffect(() => {
+        if (selectedIndex >= 0 && tableContainerRef.current) {
+            const container = tableContainerRef.current;
+            const rows = container.querySelectorAll('tbody tr');
+            const selectedRow = rows[selectedIndex] as HTMLElement;
+
+            if (selectedRow) {
+                const containerRect = container.getBoundingClientRect();
+                const rowRect = selectedRow.getBoundingClientRect();
+
+                if (rowRect.bottom > containerRect.bottom || rowRect.top < containerRect.top) {
+                    selectedRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
         }
-    };
+    }, [selectedIndex]);
 
     const handleRowClick = (proveedor: ProveedorResultado) => {
         onProveedorSelected(proveedor);
@@ -86,11 +151,13 @@ const SearchProveedorModal: React.FC<SearchProveedorModalProps> = ({
     };
 
     // Reset state when modal opens
-    React.useEffect(() => {
+    useEffect(() => {
         if (open) {
             setSearchTerm('');
             setProveedores([]);
             setError('');
+            setSelectedIndex(-1);
+            setTimeout(() => busquedaRef.current?.focus(), 100);
         }
     }, [open]);
 
@@ -98,6 +165,7 @@ const SearchProveedorModal: React.FC<SearchProveedorModalProps> = ({
         <Dialog
             open={open}
             onClose={onClose}
+            onKeyDown={handleKeyDown}
             maxWidth="md"
             fullWidth
             PaperProps={{
@@ -116,7 +184,7 @@ const SearchProveedorModal: React.FC<SearchProveedorModalProps> = ({
                 py: 1.5
             }}>
                 <Typography variant="h6" component="div">
-                    Búsqueda de Proveedores
+                    Búsqueda de Proveedores (↑↓ Enter)
                 </Typography>
                 <IconButton
                     edge="end"
@@ -138,10 +206,9 @@ const SearchProveedorModal: React.FC<SearchProveedorModalProps> = ({
                         size="small"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyPress={handleKeyPress}
                         placeholder="Ingrese nombre o RUC"
                         disabled={isSearching}
-                        autoFocus
+                        inputRef={busquedaRef}
                     />
                     <Button
                         variant="contained"
@@ -162,28 +229,34 @@ const SearchProveedorModal: React.FC<SearchProveedorModalProps> = ({
 
                 {/* Lista de proveedores */}
                 {proveedores.length > 0 && (
-                    <TableContainer component={Paper} elevation={0} sx={{ maxHeight: 350, border: '1px solid #eee' }}>
+                    <TableContainer component={Paper} elevation={0} sx={{ maxHeight: 350, border: '1px solid #eee' }} ref={tableContainerRef}>
                         <Table size="small" stickyHeader>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Nombre Fantasia</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>RUC</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Responsable</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>ID</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>Nombre</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>Nombre Fantasia</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>RUC</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e3f2fd' }}>Responsable</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {proveedores.map((prov) => (
+                                {proveedores.map((prov, index) => (
                                     <TableRow
                                         key={prov.idProveedor}
                                         onClick={() => handleRowClick(prov)}
-                                        hover
-                                        sx={{ cursor: 'pointer' }}
+                                        selected={index === selectedIndex}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            backgroundColor: index === selectedIndex ? '#c8e6c9 !important' : undefined,
+                                            '&:hover': {
+                                                backgroundColor: index === selectedIndex ? '#c8e6c9' : '#e8f5e9',
+                                            },
+                                        }}
                                     >
                                         <TableCell>{prov.idProveedor}</TableCell>
                                         <TableCell>{prov.nombre}</TableCell>
-                                         <TableCell>{prov.nombreFantasia}</TableCell>
+                                        <TableCell>{prov.nombreFantasia}</TableCell>
                                         <TableCell>{prov.rucProveedor}</TableCell>
                                         <TableCell>{prov.responsable || '-'}</TableCell>
                                     </TableRow>

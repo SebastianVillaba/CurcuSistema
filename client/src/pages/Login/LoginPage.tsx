@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Button, Stack, TextField, Typography, Alert } from '@mui/material';
+import { Box, Button, Stack, Typography, Alert } from '@mui/material';
+import TextField from '../../components/UppercaseTextField';
 import { useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 
@@ -31,20 +32,20 @@ export default function LoginPage(): JSX.Element {
         username: usuario,
         password: password
       });
-      
+
       console.log('Login response:', response.data);
-      
+
       if (response.data.success == true) {
         // Guardar token si existe
         if (response.data.token) {
           localStorage.setItem('authToken', response.data.token);
         }
-        
+
         // Guardar información del usuario
         if (response.data.user) {
           localStorage.setItem('user', JSON.stringify(response.data.user));
         }
-        
+
         // Redirigir al home
         navigate('/');
       } else {
@@ -52,9 +53,9 @@ export default function LoginPage(): JSX.Element {
       }
     } catch (error) {
       console.error('Error during login:', error);
-      
+
       if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<{message?: string}>;
+        const axiosError = error as AxiosError<{ message?: string }>;
         setError(axiosError.response?.data?.message || 'Error al iniciar sesión');
       } else {
         setError('Error inesperado al iniciar sesión');
@@ -90,7 +91,7 @@ export default function LoginPage(): JSX.Element {
           disabled={loading}
         />
 
-        <TextField 
+        <TextField
           label="Contraseña"
           type="password"
           value={password}
@@ -102,9 +103,9 @@ export default function LoginPage(): JSX.Element {
           disabled={loading}
         />
 
-        <Button 
-          type="submit" 
-          variant="contained" 
+        <Button
+          type="submit"
+          variant="contained"
           size="large"
           disabled={loading}
         >

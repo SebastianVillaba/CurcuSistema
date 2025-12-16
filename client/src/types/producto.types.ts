@@ -10,6 +10,8 @@ export interface Producto {
   idUsuarioAlta?: number;
   idStock?: number;
   gasto?: boolean;
+  origen?: boolean;
+  activo?: boolean;
   idImpuesto?: number;
 }
 

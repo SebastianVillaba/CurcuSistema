@@ -4,12 +4,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Button,
   Alert,
   CircularProgress,
   InputAdornment
 } from '@mui/material';
+import TextField from './UppercaseTextField';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { gastoService } from '../services/gasto.service';
@@ -61,7 +61,7 @@ const GastoModal: React.FC<GastoModalProps> = ({ open, onClose, onGastoAgregado 
       });
 
       setSuccess('Gasto agregado exitosamente');
-      
+
       // Limpiar formulario
       setTimeout(() => {
         setConcepto('');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,9 +13,9 @@ import {
   IconButton,
   Typography,
   Box,
-  TextField,
   Alert,
 } from '@mui/material';
+import TextField from './UppercaseTextField';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import { productoService } from '../services/producto.service';
@@ -53,6 +53,23 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
   const [productos, setProductos] = useState<ProductoResultado[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const busquedaRef = useRef<HTMLInputElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  // Ref para mantener referencia actualizada de productos (evita stale closures)
+  const productosRef = useRef<ProductoResultado[]>([]);
+  // Ref para mantener referencia actualizada de selectedIndex
+  const selectedIndexRef = useRef<number>(-1);
+
+  // Mantener productosRef sincronizado con productos
+  useEffect(() => {
+    productosRef.current = productos;
+  }, [productos]);
+
+  // Mantener selectedIndexRef sincronizado con selectedIndex
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
 
   const handleSearch = async (term?: string) => {
     const query = term?.trim() ?? searchTerm?.trim();
@@ -60,6 +77,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
     if (!query) {
       setProductos([]);
       setError('');
+      setSelectedIndex(-1);
       return;
     }
 
@@ -79,7 +97,11 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
         onClose();
       } else {
         setProductos(results);
-        if (results.length === 0) {
+        // Auto-seleccionar el primer producto si hay resultados
+        if (results.length > 0) {
+          setSelectedIndex(0);
+        } else {
+          setSelectedIndex(-1);
           setError('No se encontraron productos');
         }
       }
@@ -87,16 +109,69 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
       console.error('Error al buscar productos:', error);
       setError(error.message || 'Error al buscar productos');
       setProductos([]);
+      setSelectedIndex(-1);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const currentProductos = productosRef.current;
+
+    // Si no hay productos, solo permitir Enter para buscar
+    if (currentProductos.length === 0) {
+      if (e.key === 'Enter' && searchTerm.trim()) {
+        e.preventDefault();
+        handleSearch();
+      }
+      return;
     }
-  };
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const newIndex = prev < currentProductos.length - 1 ? prev + 1 : prev;
+          return newIndex;
+        });
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const newIndex = prev > 0 ? prev - 1 : 0;
+          return newIndex;
+        });
+        break;
+      case 'Enter':
+        e.preventDefault();
+        const currentIndex = selectedIndexRef.current;
+        if (currentIndex >= 0 && currentIndex < currentProductos.length) {
+          onSelectProduct(currentProductos[currentIndex]);
+          onClose();
+        }
+        break;
+    }
+  }, [onSelectProduct, onClose, searchTerm]);
+
+  // Scroll automático para mantener visible el elemento seleccionado
+  useEffect(() => {
+    if (selectedIndex >= 0 && tableContainerRef.current) {
+      const container = tableContainerRef.current;
+      const rows = container.querySelectorAll('tbody tr');
+      const selectedRow = rows[selectedIndex] as HTMLElement;
+
+      if (selectedRow) {
+        const containerRect = container.getBoundingClientRect();
+        const rowRect = selectedRow.getBoundingClientRect();
+
+        if (rowRect.bottom > containerRect.bottom) {
+          selectedRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } else if (rowRect.top < containerRect.top) {
+          selectedRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+  }, [selectedIndex]);
 
   const handleRowClick = (producto: ProductoResultado) => {
     onSelectProduct(producto);
@@ -104,16 +179,23 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
   };
 
   // Reset state when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
+      // Aqui hago que lo que escribio el usuario venga tambien al modal
       const initialTerm = busqueda?.trim() ?? '';
       setSearchTerm(initialTerm);
       setProductos([]);
       setError('');
+      setSelectedIndex(-1);
 
       if (initialTerm) {
         handleSearch(initialTerm);
       }
+
+      // Enfocar el campo de búsqueda cuando se abre el modal
+      setTimeout(() => {
+        busquedaRef.current?.focus();
+      }, 100);
     }
   }, [open, busqueda]);
 
@@ -121,6 +203,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
+      onKeyDown={handleKeyDown}
       maxWidth="lg"
       fullWidth
       PaperProps={{
@@ -139,7 +222,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
         py: 1.5
       }}>
         <Typography variant="h6" component="div">
-          Búsqueda de Productos
+          Búsqueda de Productos (↑↓ para navegar, Enter para seleccionar)
         </Typography>
         <IconButton
           edge="end"
@@ -161,13 +244,13 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
             size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={handleKeyPress}
             placeholder="Ingrese código, código de barra o nombre del producto"
             disabled={isSearching}
+            inputRef={busquedaRef}
           />
           <IconButton
             color="primary"
-            onClick={handleSearch}
+            onClick={() => handleSearch()}
             disabled={isSearching || !searchTerm.trim()}
             size="small"
           >
@@ -191,7 +274,7 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
         )}
 
         {productos.length > 0 && (
-          <TableContainer component={Paper} elevation={0}>
+          <TableContainer component={Paper} elevation={0} ref={tableContainerRef}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
@@ -237,16 +320,18 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
                   <TableRow
                     key={producto.idProducto || index}
                     onClick={() => handleRowClick(producto)}
+                    selected={index === selectedIndex}
                     sx={{
                       cursor: 'pointer',
+                      backgroundColor: index === selectedIndex ? '#c8e6c9 !important' : undefined,
                       '&:hover': {
-                        backgroundColor: '#c8e6c9',
+                        backgroundColor: index === selectedIndex ? '#c8e6c9' : '#e8f5e9',
                       },
                       '&:nth-of-type(even)': {
-                        backgroundColor: '#f9f9f9',
+                        backgroundColor: index === selectedIndex ? '#c8e6c9' : '#f9f9f9',
                       },
                       '&:nth-of-type(even):hover': {
-                        backgroundColor: '#c8e6c9',
+                        backgroundColor: index === selectedIndex ? '#c8e6c9' : '#e8f5e9',
                       },
                     }}
                   >
@@ -290,3 +375,4 @@ const SearchProductModal: React.FC<SearchProductModalProps> = ({
 };
 
 export default SearchProductModal;
+

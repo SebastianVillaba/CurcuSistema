@@ -1,5 +1,4 @@
 import {
-    TextField,
     MenuItem,
     FormControl,
     InputLabel,
@@ -10,6 +9,7 @@ import {
     Checkbox,
     FormControlLabel,
 } from '@mui/material';
+import TextField from '../UppercaseTextField';
 import { useState, useEffect } from 'react';
 import type { TerminalWeb } from '../../types/terminalWeb.types';
 import { pedidoInternoService } from '../../services/pedidoInterno.service';

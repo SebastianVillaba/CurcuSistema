@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import {
     Box,
     Paper,
-    TextField,
     Button,
     Typography,
     Grid,
@@ -18,6 +17,7 @@ import {
     Select,
     MenuItem
 } from '@mui/material';
+import TextField from '../../components/UppercaseTextField';
 import SaveIcon from '@mui/icons-material/Save';
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteIcon from '@mui/icons-material/Delete';

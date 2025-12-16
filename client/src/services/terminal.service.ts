@@ -4,13 +4,27 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 const TERMINAL_TOKEN_KEY = 'terminalToken';
 
 /**
+ * Genera un UUID v4 compatible con contextos no seguros (HTTP).
+ */
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+/**
  * Obtiene el token de la terminal desde localStorage o genera uno nuevo.
  * @returns El token de la terminal.
  */
 export const obtenerOgenerarToken = (): string => {
   let token = localStorage.getItem(TERMINAL_TOKEN_KEY);
   if (!token) {
-    token = crypto.randomUUID();
+    token = generateUUID();
     localStorage.setItem(TERMINAL_TOKEN_KEY, token);
   }
   return token;

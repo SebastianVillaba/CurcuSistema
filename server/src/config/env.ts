@@ -1,7 +1,15 @@
 import { config as loadEnv } from 'dotenv';
 import { z } from 'zod';
+import path from 'path';
 
-loadEnv();
+// Cargar el archivo .env según el entorno
+const envFile = process.env.NODE_ENV === 'production'
+  ? '.env.production'
+  : '.env.development';
+
+// Usar process.cwd() para obtener la raíz del proyecto (funciona en ESM y CommonJS)
+const envPath = path.resolve(process.cwd(), envFile);
+loadEnv({ path: envPath });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

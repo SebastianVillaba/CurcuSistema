@@ -99,16 +99,16 @@ const Facturacion: React.FC = () => {
 
   const { subtotal, descuentoTotal, total, iva5Total, iva10Total, ivaTotal } = calcularTotales();
 
-  // Atajo de teclado Alt+T para terminar venta y Ctrl+C para buscar clientes
+  // Atajo de teclado F4 para terminar venta y F2 para buscar clientes
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.altKey && event.key.toLowerCase() === 't') {
+      if (event.key === 'F4') {
         event.preventDefault();
         if (items.length > 0) {
           handleTerminarVenta();
         }
       }
-      if (event.altKey && event.key.toLowerCase() === 'c') {
+      if (event.key === 'F2') {
         event.preventDefault();
         setOpenClienteModal(true);
       }
@@ -571,7 +571,7 @@ const Facturacion: React.FC = () => {
                         width: '10vh'
                       }}
                       onClick={() => setOpenClienteModal(true)}
-                      title="Buscar/Agregar Cliente (Alt+C)"
+                      title="Buscar/Agregar Cliente (F2)"
                     >
                       <PersonSearchIcon />
                     </Button>
@@ -625,31 +625,42 @@ const Facturacion: React.FC = () => {
             </Grid>
           </Paper>
 
-          <Paper sx={{ p: 2, mb: 2, height: '18vh' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Paper sx={{ p: 2, mb: 2, minHeight: '18vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
               <Typography variant='h2'>₲</Typography>
               <Typography
                 variant='h3'
                 sx={{
                   backgroundColor: "#2dfc61",
                   color: "black",
-                  padding: '2px',
+                  padding: '4px 8px',
                   borderRadius: '5px',
                   border: '1.5px solid #000',
                   mx: 1,
-                  width: '25vh',
-                  textAlign: 'center'
+                  minWidth: '25vh',
+                  maxWidth: '100%',
+                  textAlign: 'center',
+                  wordBreak: 'break-word'
                 }}
               >{total.toLocaleString()}</Typography>
-
             </div>
             <div style={{
               display: 'flex',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              marginTop: '12px'
             }}>
               <Typography
                 sx={{
-                  mt: 2,
+                  fontWeight: 'bold',
+                  fontSize: 'clamp(1rem, 2.5vw, 1.5rem)',
+                  backgroundColor: '#f5f5f5',
+                  padding: '6px 16px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd',
+                  letterSpacing: '1px',
+                  textAlign: 'center',
+                  wordBreak: 'break-all',
+                  maxWidth: '100%'
                 }}
                 variant='h5'
               >{numeroFactura}</Typography>
@@ -808,7 +819,7 @@ const Facturacion: React.FC = () => {
                   disabled={items.length === 0}
                   size="large"
                 >
-                  Terminar Venta (Alt+T)
+                  Terminar Venta (F4)
                 </Button>
               </Box>
             </Grid>

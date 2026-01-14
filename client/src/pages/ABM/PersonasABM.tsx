@@ -75,7 +75,7 @@ export default function PersonasABM(): JSX.Element {
 
     try {
       const results = await personaService.buscarPersonas(searchTerm, searchBy);
-      console.log(results);
+      //console.log(results);
       setPersonas(results.result);
     } catch (err: any) {
       console.error('Error al buscar personas:', err);
@@ -315,7 +315,7 @@ export default function PersonasABM(): JSX.Element {
                   onClick={() => handleSelectPersona(persona)}
                 >
                   <ListItemText
-                    primary={persona.nombre}
+                    primary={persona.nombre + ' ' + persona.apellido}
                     secondary={`RUC: ${persona.ruc || 'N/A'}`}
                   />
                 </ListItemButton>

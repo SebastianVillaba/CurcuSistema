@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { executeRequest, sql } from '../utils/dbHandler';
-import { Request } from 'mssql';
 
 
 /**
@@ -79,7 +78,7 @@ export const obtenerTipoPlanillaPac = async (req: Request, res: Response) => {
 }
 
 export const guardarPlanillaPaciente = async (req: Request, res: Response) => {
-    const { idTerminalWeb, idUsuarioAlta, fechaPlanilla, idTipoPlanillaPac  } = req.body;
+    const { idTerminalWeb, idUsuarioAlta, fechaPlanilla, idTipoPlanillaPac } = req.body;
     try {
         const result = await executeRequest({
             query: 'sp_guardarPlanillaPaciente',

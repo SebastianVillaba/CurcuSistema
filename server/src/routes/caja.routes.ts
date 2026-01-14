@@ -4,7 +4,10 @@ import {
   abrirCaja, 
   cerrarCaja, 
   agregarGastoCaja,
-  consultarMovimientosPorCaja 
+  consultarMovimientosPorCaja, 
+  agregarArqueoCajaTmp,
+  listarArqueoCajaTmp,
+  eliminarArqueoCajaTmp
 } from '../controllers/caja.controller';
 
 const router = Router();
@@ -23,5 +26,14 @@ router.post('/gasto', agregarGastoCaja);
 
 // Ruta para consultar los movimientos de una caja específica
 router.get('/movimientos', consultarMovimientosPorCaja);
+
+// Ruta para agregar los detalles al arqueo de caja
+router.post('/agregarArqueoCajaTmp', agregarArqueoCajaTmp);
+
+// Ruta para listar los detalles del arqueo de la caja
+router.get('/listarArqueoCajaTmp', listarArqueoCajaTmp);
+
+// Ruta para eliminar un arqueo de caja
+router.delete('/eliminarArqueoCajaTmp', eliminarArqueoCajaTmp);
 
 export default router;

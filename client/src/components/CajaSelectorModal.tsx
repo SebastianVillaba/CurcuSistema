@@ -17,15 +17,20 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  IconButton,
+  Divider,
 } from '@mui/material';
 import TextField from './UppercaseTextField';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import type { Caja, MovimientoCaja } from '../types/caja.types';
+import AddIcon from '@mui/icons-material/Add';
+import type { Caja, MovimientoCaja, ArqueoCajaTmpItem } from '../types/caja.types';
 import axios from 'axios';
 import { reporteService } from '../services/reporte.service';
 import { ticketService } from '../services/ticket.service';
+import { cajaService, DENOMINACIONES } from '../services/caja.service';
+import { useTerminal } from '../hooks/useTerminal';
 
 interface CajaSelectorModalProps {
   open: boolean;
@@ -38,15 +43,21 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
   onClose,
   onSelectCaja,
 }) => {
+  const { idTerminalWeb } = useTerminal();
+
   const [selectedCaja, setSelectedCaja] = useState<Caja | null>(null);
   const [expandedCaja, setExpandedCaja] = useState<number | null>(null);
   const [cajas, setCajas] = useState<Caja[]>([]);
   const [movimientos, setMovimientos] = useState<{ [key: number]: MovimientoCaja[] }>({});
   const [selectedMovimiento, setSelectedMovimiento] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const [montoInicial, setMontoInicial] = useState<string>('');
-  const [montoFinal, setMontoFinal] = useState<string>('');
   const [loadingAction, setLoadingAction] = useState(false);
+
+  // Estados para arqueo de caja
+  const [arqueoItems, setArqueoItems] = useState<ArqueoCajaTmpItem[]>([]);
+  const [totalArqueo, setTotalArqueo] = useState<number>(0);
+  const [montoMoneda, setMontoMoneda] = useState<string>('');
+  const [cantidadBillete, setCantidadBillete] = useState<{ [key: number]: string }>({});
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -56,6 +67,13 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
       cargarCajas();
     }
   }, [open]);
+
+  // Cargar arqueo cuando se selecciona una caja
+  useEffect(() => {
+    if (selectedCaja && idTerminalWeb) {
+      cargarArqueo();
+    }
+  }, [selectedCaja, idTerminalWeb]);
 
   const cargarCajas = async () => {
     setLoading(true);
@@ -92,6 +110,76 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
     }
   };
 
+  const cargarArqueo = async () => {
+    if (!idTerminalWeb) return;
+
+    try {
+      const response = await cajaService.listarArqueoCajaTmp(idTerminalWeb);
+      if (response.success) {
+        setArqueoItems(response.result);
+        setTotalArqueo(response.totalArqueo || 0);
+      }
+    } catch (error) {
+      console.error('Error al cargar arqueo:', error);
+    }
+  };
+
+  const handleAgregarDenominacion = async (idDenominacion: number) => {
+    if (!idTerminalWeb) {
+      alert('Error: Terminal no identificada');
+      return;
+    }
+
+    const cantidad = parseInt(cantidadBillete[idDenominacion] || '1');
+    if (cantidad <= 0) {
+      alert('La cantidad debe ser mayor a 0');
+      return;
+    }
+
+    setLoadingAction(true);
+    try {
+      await cajaService.agregarArqueoCajaTmp(idTerminalWeb, idDenominacion, cantidad);
+      setCantidadBillete(prev => ({ ...prev, [idDenominacion]: '' }));
+      await cargarArqueo();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al agregar denominación');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleEliminarDenominacion = async (idArqueoTmp: number) => {
+    
+  }
+
+  /**
+   * Agrega un monto de monedas al arqueo de caja
+   */
+  const handleAgregarMoneda = async () => {
+    if (!idTerminalWeb) {
+      alert('Error: Terminal no identificada');
+      return;
+    }
+
+    const monto = parseInt(montoMoneda);
+    if (!monto || monto <= 0) {
+      alert('Ingrese un monto válido');
+      return;
+    }
+
+    setLoadingAction(true);
+    try {
+      // ID 7 para monedas (asumiendo que existe en la BD)
+      await cajaService.agregarArqueoCajaTmp(idTerminalWeb, 7, monto);
+      setMontoMoneda('');
+      await cargarArqueo();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al agregar moneda');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   const handleSelectCaja = async (caja: Caja) => {
     const idCajaActual = localStorage.getItem('idCajaActual');
 
@@ -114,28 +202,37 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
     }
     setSelectedCaja(caja);
     setSelectedMovimiento(null);
-    setMontoInicial('');
-    setMontoFinal('');
+    // Limpiar estados de arqueo al cambiar de caja
+    setArqueoItems([]);
+    setTotalArqueo(0);
+    setMontoMoneda('');
+    setCantidadBillete({});
   };
 
   const handleAbrirCaja = async () => {
-    if (!selectedCaja || !montoInicial) {
-      alert('Por favor ingrese el monto inicial');
+    if (!selectedCaja || !idTerminalWeb) {
+      alert('Error: Seleccione una caja y asegúrese de tener terminal asignada');
+      return;
+    }
+
+    if (totalArqueo <= 0) {
+      alert('Por favor ingrese al menos una denominación para el arqueo inicial');
       return;
     }
 
     setLoadingAction(true);
     try {
       const idUsuario = localStorage.getItem('idUsuario') || '1';
-      const response = await axios.post(`${API_URL}/caja/abrir`, {
-        idCaja: selectedCaja.idCaja,
-        idUsuario: parseInt(idUsuario),
-        montoInicial: parseFloat(montoInicial)
-      });
+      const response = await cajaService.abrirCaja(
+        selectedCaja.idCaja,
+        parseInt(idUsuario),
+        totalArqueo,
+        idTerminalWeb
+      );
 
-      if (response.data.success) {
+      if (response.success) {
         // Guardar el idMovimientoCaja que devuelve el SP
-        const idMovimientoCaja = response.data.idMovimientoCaja;
+        const idMovimientoCaja = response.idMovimientoCaja;
         if (idMovimientoCaja) {
           localStorage.setItem('idMovimientoCaja', idMovimientoCaja.toString());
           localStorage.setItem('idCajaActual', selectedCaja.idCaja.toString());
@@ -144,7 +241,10 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
         alert('Caja abierta exitosamente');
         await cargarCajas();
         await cargarMovimientos(selectedCaja.idCaja);
-        setMontoInicial('');
+
+        // Limpiar arqueo
+        setArqueoItems([]);
+        setTotalArqueo(0);
 
         // Cerrar el modal después de abrir la caja
         onSelectCaja(selectedCaja);
@@ -158,8 +258,13 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
   };
 
   const handleCerrarCaja = async () => {
-    if (!selectedCaja || !montoFinal) {
-      alert('Por favor ingrese el monto final contado');
+    if (!selectedCaja || !idTerminalWeb) {
+      alert('Error: Seleccione una caja y asegúrese de tener terminal asignada');
+      return;
+    }
+
+    if (totalArqueo <= 0) {
+      alert('Por favor ingrese al menos una denominación para el arqueo final');
       return;
     }
 
@@ -175,14 +280,14 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
     setLoadingAction(true);
     try {
       const idUsuario = localStorage.getItem('idUsuario') || '1';
-      const response = await axios.post(`${API_URL}/caja/cerrar`, {
-        idCaja: selectedCaja.idCaja,
-        idMovimientoCaja: parseInt(idMovimientoCaja),
-        idUsuarioCierre: parseInt(idUsuario),
-        montoFinalContado: parseFloat(montoFinal)
-      });
+      const response = await cajaService.cerrarCaja(
+        parseInt(idMovimientoCaja),
+        parseInt(idUsuario),
+        totalArqueo,
+        idTerminalWeb
+      );
 
-      if (response.data.success) {
+      if (response.success) {
         // Limpiar el localStorage después de cerrar la caja
         localStorage.removeItem('idMovimientoCaja');
         localStorage.removeItem('idCajaActual');
@@ -190,7 +295,11 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
         alert('Caja cerrada exitosamente');
         await cargarCajas();
         await cargarMovimientos(selectedCaja.idCaja);
-        setMontoFinal('');
+
+        // Limpiar arqueo
+        setArqueoItems([]);
+        setTotalArqueo(0);
+
         handleCancel();
       }
     } catch (error: any) {
@@ -204,16 +313,16 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
     setSelectedCaja(null);
     setExpandedCaja(null);
     setSelectedMovimiento(null);
-    setMontoInicial('');
-    setMontoFinal('');
+    setArqueoItems([]);
+    setTotalArqueo(0);
+    setMontoMoneda('');
+    setCantidadBillete({});
     onClose();
   };
 
   const handleSelectMovimiento = (idMovimientoCaja: number) => {
     setSelectedMovimiento(idMovimientoCaja);
   };
-
-
 
   const handleImprimirReporte = async () => {
     if (!selectedMovimiento) return;
@@ -241,6 +350,151 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
       minute: '2-digit'
     });
   };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-PY', {
+      style: 'decimal',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
+  // Componente de UI para arqueo de denominaciones
+  const ArqueoUI = ({ modo }: { modo: 'apertura' | 'cierre' }) => (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="h6" gutterBottom sx={{ color: modo === 'apertura' ? 'success.main' : 'error.main' }}>
+        {modo === 'apertura' ? '💰 Arqueo de Apertura' : '💰 Arqueo de Cierre'}
+      </Typography>
+
+      {/* Grid de botones de denominaciones */}
+      <Paper sx={{ p: 2, mb: 2, backgroundColor: '#f5f5f5' }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Billetes en Guaraníes
+        </Typography>
+        <Grid container spacing={1}>
+          {DENOMINACIONES.map((denom) => (
+            <Grid size={{ xs: 6, sm: 4 }} key={denom.id}>
+              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                <TextField
+                  size="small"
+                  type="number"
+                  placeholder="Cant."
+                  value={cantidadBillete[denom.id] || ''}
+                  onChange={(e) => setCantidadBillete(prev => ({
+                    ...prev,
+                    [denom.id]: e.target.value
+                  }))}
+                  sx={{ width: 70 }}
+                  inputProps={{ min: 1 }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => handleAgregarDenominacion(denom.id)}
+                  disabled={loadingAction}
+                  sx={{
+                    minWidth: 'auto',
+                    px: 1,
+                    backgroundColor: '#1976d2',
+                    fontSize: '0.75rem',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {formatCurrency(denom.valor)}
+                </Button>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* Input para monedas */}
+        <Box sx={{ mt: 2, display: 'flex', gap: 1, alignItems: 'center' }}>
+          <TextField
+            size="small"
+            type="number"
+            label="Monto en Monedas (Gs.)"
+            value={montoMoneda}
+            onChange={(e) => setMontoMoneda(e.target.value)}
+            sx={{ flex: 1 }}
+            inputProps={{ min: 1 }}
+          />
+          <IconButton
+            color="primary"
+            onClick={handleAgregarMoneda}
+            disabled={loadingAction || !montoMoneda}
+            sx={{ backgroundColor: '#e3f2fd' }}
+          >
+            <AddIcon />
+          </IconButton>
+        </Box>
+      </Paper>
+
+      {/* Tabla de items del arqueo */}
+      {arqueoItems.length > 0 && (
+        <TableContainer component={Paper} sx={{ mb: 2, maxHeight: 200 }}>
+          <Table size="small" stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#e8f5e9' }}>Denominación</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold', backgroundColor: '#e8f5e9' }}>Valor</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold', backgroundColor: '#e8f5e9' }}>Cantidad</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold', backgroundColor: '#e8f5e9' }}>Subtotal</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold', backgroundColor: '#e8f5e9' }}>Acción</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {arqueoItems.map((item) => (
+                <TableRow key={item.idArqueoTmp}>
+                  <TableCell>{item.nombreBillete}</TableCell>
+                  <TableCell align="right">{formatCurrency(item.valor)}</TableCell>
+                  <TableCell align="right">{item.cantidad}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                    {formatCurrency(item.subtotal)}
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      color="error"
+                      onClick={() => handleEliminarItem(item.idArqueoTmp)}
+                      disabled={loadingAction}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Total del arqueo */}
+      <Paper sx={{ p: 2, backgroundColor: modo === 'apertura' ? '#e8f5e9' : '#ffebee' }}>
+        <Typography variant="h5" align="right" sx={{ fontWeight: 'bold' }}>
+          TOTAL: Gs. {formatCurrency(totalArqueo)}
+        </Typography>
+      </Paper>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Botón de acción */}
+      <Button
+        variant="contained"
+        color={modo === 'apertura' ? 'success' : 'error'}
+        onClick={modo === 'apertura' ? handleAbrirCaja : handleCerrarCaja}
+        disabled={loadingAction || totalArqueo <= 0}
+        fullWidth
+        size="large"
+      >
+        {loadingAction ? (
+          <CircularProgress size={24} />
+        ) : modo === 'apertura' ? (
+          'Abrir Caja'
+        ) : (
+          'Cerrar Caja'
+        )}
+      </Button>
+    </Box>
+  );
 
   return (
     <Dialog open={open} onClose={handleCancel} maxWidth="lg" fullWidth>
@@ -328,7 +582,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
               ))}
             </Grid>
 
-            {/* Sección expandida con movimientos */}
+            {/* Sección expandida con movimientos y arqueo */}
             <Collapse in={expandedCaja !== null && selectedCaja !== null}>
               {selectedCaja && expandedCaja === selectedCaja.idCaja && (
                 <Box sx={{ mt: 3 }}>
@@ -348,7 +602,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                           {movimientos[selectedCaja.idCaja] && movimientos[selectedCaja.idCaja].length > 0 ? (
                             <TableContainer
                               sx={{
-                                maxHeight: 400,
+                                maxHeight: 300,
                                 border: '1px solid #e0e0e0',
                                 borderRadius: 1,
                                 '& .MuiTableCell-root': {
@@ -438,14 +692,14 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                       );
                     })()}
 
-                    {/* Controles de abrir/cerrar caja - Solo mostrar si es mi caja o está cerrada */}
+                    {/* Controles de abrir/cerrar caja con arqueo */}
                     {(() => {
                       const idCajaActual = localStorage.getItem('idCajaActual');
                       const esMiCaja = parseInt(idCajaActual || '0') === selectedCaja.idCaja;
                       const mostrarControles = selectedCaja.estadoCaja === false || esMiCaja;
 
                       return mostrarControles ? (
-                        <Box sx={{ mt: 3, display: 'flex', gap: 2, flexDirection: 'column' }}>
+                        <Box sx={{ mt: 3 }}>
                           {selectedCaja.estadoCaja === false ? (
                             selectedMovimiento ? (
                               <Button
@@ -457,25 +711,7 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                                 Imprimir Reporte
                               </Button>
                             ) : (
-                              <>
-                                <TextField
-                                  label="Monto Inicial"
-                                  type="number"
-                                  value={montoInicial}
-                                  onChange={(e) => setMontoInicial(e.target.value)}
-                                  fullWidth
-                                  size="small"
-                                />
-                                <Button
-                                  variant="contained"
-                                  color="success"
-                                  onClick={handleAbrirCaja}
-                                  disabled={loadingAction || !montoInicial}
-                                  fullWidth
-                                >
-                                  {loadingAction ? <CircularProgress size={24} /> : 'Abrir Caja'}
-                                </Button>
-                              </>
+                              <ArqueoUI modo="apertura" />
                             )
                           ) : (() => {
                             // Verificar si el movimiento seleccionado es el actual
@@ -488,29 +724,9 @@ const CajaSelectorModal: React.FC<CajaSelectorModalProps> = ({
                               parseInt(idMovimientoCajaActual) === movimientoSeleccionado.idMovimientoCaja;
                             const esMovimientoCerrado = movimientoSeleccionado?.fechaCierre !== null;
 
-                            // Si es el movimiento actual y está abierto, mostrar cerrar caja
+                            // Si es el movimiento actual y está abierto, mostrar cerrar caja con arqueo
                             if (esMovimientoActual && !esMovimientoCerrado) {
-                              return (
-                                <>
-                                  <TextField
-                                    label="Monto Final Contado"
-                                    type="number"
-                                    value={montoFinal}
-                                    onChange={(e) => setMontoFinal(e.target.value)}
-                                    fullWidth
-                                    size="small"
-                                  />
-                                  <Button
-                                    variant="contained"
-                                    color="error"
-                                    onClick={handleCerrarCaja}
-                                    disabled={loadingAction || !montoFinal}
-                                    fullWidth
-                                  >
-                                    {loadingAction ? <CircularProgress size={24} /> : 'Cerrar Caja'}
-                                  </Button>
-                                </>
-                              );
+                              return <ArqueoUI modo="cierre" />;
                             }
 
                             // Si hay un movimiento seleccionado y está cerrado, mostrar imprimir reporte

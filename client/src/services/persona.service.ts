@@ -134,6 +134,8 @@ export const personaService = {
           }
         }
       );
+      console.log(response);
+      
       return response.data;
     } catch (error: any) {
       console.error('Error al buscar personas:', error);

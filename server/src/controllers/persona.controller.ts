@@ -217,6 +217,8 @@ export const buscarPersona = async (req: Request, res: Response): Promise<void> 
     });
 
     const rowsAffected = result.rowsAffected[0];
+    console.log(result.recordsets);
+    
 
     res.status(200).json({
       succes: true,

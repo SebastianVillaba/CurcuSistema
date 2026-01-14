@@ -45,12 +45,12 @@ export const consultarCajas = async (req: Request, res: Response): Promise<void>
  */
 export const abrirCaja = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idCaja, idUsuario, montoInicial } = req.body;
+    const { idCaja, idUsuario, montoMoneda, idTerminalWeb } = req.body;
 
-    if (!idCaja || !idUsuario || montoInicial === undefined) {
+    if (!idCaja || !idUsuario || montoMoneda === undefined || !idTerminalWeb) {
       res.status(400).json({
         success: false,
-        message: 'Faltan parámetros requeridos (idCaja, idUsuario, montoInicial).'
+        message: 'Faltan parámetros requeridos (idCaja, idUsuario, montoMoneda, idTerminalWeb).'
       });
       return;
     }
@@ -58,7 +58,8 @@ export const abrirCaja = async (req: Request, res: Response): Promise<void> => {
     const inputs = [
       { name: 'idCaja', type: sql.Int, value: idCaja },
       { name: 'idUsuario', type: sql.Int, value: idUsuario },
-      { name: 'montoInicial', type: sql.Money, value: montoInicial }
+      { name: 'montoMoneda', type: sql.Money, value: montoMoneda },
+      { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb }
     ];
 
     const result = await executeRequest({
@@ -97,21 +98,21 @@ export const abrirCaja = async (req: Request, res: Response): Promise<void> => {
  */
 export const cerrarCaja = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idCaja, idMovimientoCaja, idUsuarioCierre, montoFinalContado } = req.body;
+    const { idMovimientoCaja, idUsuarioCierre, montoMoneda, idTerminalWeb } = req.body;
 
-    if (!idCaja || !idMovimientoCaja || !idUsuarioCierre || montoFinalContado === undefined) {
+    if ( !idMovimientoCaja || !idUsuarioCierre || montoMoneda === undefined || !idTerminalWeb) {
       res.status(400).json({
         success: false,
-        message: 'Faltan parámetros requeridos (idCaja, idMovimientoCaja, idUsuarioCierre, montoFinalContado).'
+        message: 'Faltan parámetros requeridos (idMovimientoCaja, idUsuarioCierre, montoMoneda, idTerminalWeb).'
       });
       return;
     }
 
     const inputs = [
-      { name: 'idCaja', type: sql.Int, value: idCaja },
       { name: 'idMovimientoCaja', type: sql.Int, value: idMovimientoCaja },
       { name: 'idUsuarioCierre', type: sql.Int, value: idUsuarioCierre },
-      { name: 'montoFinalContado', type: sql.Money, value: montoFinalContado }
+      { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
+      { name: 'montoMoneda', type: sql.Money, value: montoMoneda }
     ];
 
     await executeRequest({
@@ -228,3 +229,130 @@ export const consultarMovimientosPorCaja = async (req: Request, res: Response): 
     });
   }
 };
+
+/**
+ * Controller para agregar un detalle al arqueo de caja
+ */
+export const agregarArqueoCajaTmp = async  (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idTerminalWeb,idDenominacion,cantidad } = req.body;
+    
+    if (!idTerminalWeb || !idDenominacion || !cantidad) {
+      res.status(400).json({
+        success: false,
+        message: 'Faltan parámetros requeridos (idTerminalWeb, idDenominacion, cantidad).'
+      });
+      return;
+    }
+
+    const inputs = [
+      { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
+      { name: 'idDenominacion', type: sql.Int, value: idDenominacion },
+      { name: 'cantidad', type: sql.Int, value: cantidad }
+    ];
+
+    await executeRequest({
+      query: 'sp_agregarArqueoTmp',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Arqueo agregado exitosamente'
+    });
+
+  } catch (error: any) {
+    if (error.number >= 50000) {
+      res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Error al agregar el arqueo",
+        error: error.message
+      });
+    }
+  }
+}
+
+/**
+ * Controller para listar los arqueos de caja
+ */
+export const listarArqueoCajaTmp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idTerminalWeb } = req.query as any;
+    
+    if (!idTerminalWeb) {
+      res.status(400).json({
+        success: false,
+        message: "El parámetro 'idTerminalWeb' es obligatorio"
+      });
+      return;
+    }
+    
+    const inputs = [
+      { name: 'idTerminalWeb', type: sql.Int, value: parseInt(idTerminalWeb) }
+    ];
+    
+    const result = await executeRequest({
+      query: 'sp_listarArqueoTmp',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json({
+      success: true,
+      result: result.recordset
+    });
+
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error al listar el arqueo",
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Controller para eliminar un arqueo de caja
+ */
+export const eliminarArqueoCajaTmp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idTerminalWeb, idArqueoTmp } = req.query as any;
+    
+    if (!idTerminalWeb || !idArqueoTmp) {
+      res.status(400).json({
+        success: false,
+        message: "El parámetro 'idTerminalWeb' y 'idArqueoTmp' son obligatorios"
+      });
+      return;
+    }
+    
+    const inputs = [
+      { name: 'idTerminalWeb', type: sql.Int, value: parseInt(idTerminalWeb) },
+      { name: 'idArqueoTmp', type: sql.Int, value: parseInt(idArqueoTmp) }
+    ];
+    
+    const result = await executeRequest({
+      query: 'sp_eliminarArqueoTmp',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json({
+      success: true,
+      result: result.recordset
+    });
+
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error al eliminar el arqueo",
+      error: error.message
+    });
+  }
+}

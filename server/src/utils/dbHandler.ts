@@ -8,8 +8,20 @@ import sql, {
   ISqlTypeFactoryWithPrecisionScale,
 } from "mssql";
 import dotenv from "dotenv";
+import path from "path";
 
-dotenv.config();
+// Cargar el archivo .env según el entorno (NODE_ENV)
+const envFile = process.env.NODE_ENV === 'production'
+  ? '.env.production'
+  : '.env.development';
+
+// Usar process.cwd() para obtener la raíz del proyecto (funciona en ESM y CommonJS)
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+
+// Mostrar a qué entorno y servidor se está conectando
+const environment = process.env.NODE_ENV || 'development';
+console.log(`🔧 Entorno: ${environment.toUpperCase()}`);
+console.log(`🗄️  Conectando a DB Server: ${process.env.DB_SERVER || 'localhost'}`);
 
 const config: SqlConfig = {
   server: process.env.DB_SERVER || "localhost",
@@ -22,24 +34,30 @@ const config: SqlConfig = {
   },
 };
 
- // Aceptar tanto instancias de tipo (ISqlType) como fábricas (sql.Int, sql.VarChar, etc.)
- type SqlParamType =
-   | ISqlType
-   | ISqlTypeFactoryWithNoParams
-   | ISqlTypeFactoryWithLength
-   | ISqlTypeFactoryWithScale
-   | ISqlTypeFactoryWithPrecisionScale;
+console.log(process.env.DB_SERVER);
+console.log(process.env.DB_NAME);
+console.log(process.env.DB_USER);
+console.log(process.env.DB_PASSWORD);
 
- interface InputParameter {
-   name: string;
-   type: SqlParamType;
-   value: any;
- }
 
- interface OutputParameter {
-   name: string;
-   type: SqlParamType;
- }
+// Aceptar tanto instancias de tipo (ISqlType) como fábricas (sql.Int, sql.VarChar, etc.)
+type SqlParamType =
+  | ISqlType
+  | ISqlTypeFactoryWithNoParams
+  | ISqlTypeFactoryWithLength
+  | ISqlTypeFactoryWithScale
+  | ISqlTypeFactoryWithPrecisionScale;
+
+interface InputParameter {
+  name: string;
+  type: SqlParamType;
+  value: any;
+}
+
+interface OutputParameter {
+  name: string;
+  type: SqlParamType;
+}
 
 interface ExecuteRequestParams {
   query: string;

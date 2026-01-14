@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import pinoHttp from 'pino-http';
+import morgan from 'morgan';
 
 import routes from './routes';
 import { logger } from './utils/logger';
@@ -13,7 +13,7 @@ app.use(cors());
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
-app.use(pinoHttp({ logger }));
+app.use(morgan('dev'));
 
 // Health check
 app.get('/healthz', (req: Request, res: Response) => {
@@ -22,6 +22,8 @@ app.get('/healthz', (req: Request, res: Response) => {
 
 // API routes
 app.use('/api', routes);
+
+const ip = process.env.DB_SERVER;
 
 // 404 handler
 app.use((req: Request, res: Response) => {

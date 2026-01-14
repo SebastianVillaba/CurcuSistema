@@ -10,3 +10,12 @@ export interface MovimientoCaja {
   fechaApertura: string;
   fechaCierre: string | null;
 }
+
+export interface ArqueoCajaTmpItem {
+  idArqueoTmp: number;
+  idDenominacion: number;
+  nombreBillete: string;
+  valor: number;
+  cantidad: number;
+  subtotal: number;
+}

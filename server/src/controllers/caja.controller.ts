@@ -45,20 +45,18 @@ export const consultarCajas = async (req: Request, res: Response): Promise<void>
  */
 export const abrirCaja = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idCaja, idUsuario, montoMoneda, idTerminalWeb } = req.body;
+    const { idUsuario, idTerminalWeb } = req.body;
 
-    if (!idCaja || !idUsuario || montoMoneda === undefined || !idTerminalWeb) {
+    if (!idUsuario || !idTerminalWeb) {
       res.status(400).json({
         success: false,
-        message: 'Faltan parámetros requeridos (idCaja, idUsuario, montoMoneda, idTerminalWeb).'
+        message: 'Faltan parámetros requeridos (idUsuario, idTerminalWeb).'
       });
       return;
     }
 
     const inputs = [
-      { name: 'idCaja', type: sql.Int, value: idCaja },
       { name: 'idUsuario', type: sql.Int, value: idUsuario },
-      { name: 'montoMoneda', type: sql.Money, value: montoMoneda },
       { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb }
     ];
 
@@ -98,21 +96,19 @@ export const abrirCaja = async (req: Request, res: Response): Promise<void> => {
  */
 export const cerrarCaja = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idMovimientoCaja, idUsuarioCierre, montoMoneda, idTerminalWeb } = req.body;
+    const { idTerminalWeb, idUsuarioCierre } = req.body;
 
-    if ( !idMovimientoCaja || !idUsuarioCierre || montoMoneda === undefined || !idTerminalWeb) {
+    if ( !idUsuarioCierre || !idTerminalWeb) {
       res.status(400).json({
         success: false,
-        message: 'Faltan parámetros requeridos (idMovimientoCaja, idUsuarioCierre, montoMoneda, idTerminalWeb).'
+        message: 'Faltan parámetros requeridos (idUsuarioCierre, idTerminalWeb).'
       });
       return;
     }
 
     const inputs = [
-      { name: 'idMovimientoCaja', type: sql.Int, value: idMovimientoCaja },
-      { name: 'idUsuarioCierre', type: sql.Int, value: idUsuarioCierre },
       { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
-      { name: 'montoMoneda', type: sql.Money, value: montoMoneda }
+      { name: 'idUsuarioCierre', type: sql.Int, value: idUsuarioCierre }
     ];
 
     await executeRequest({
@@ -147,25 +143,26 @@ export const cerrarCaja = async (req: Request, res: Response): Promise<void> => 
  */
 export const agregarGastoCaja = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idMovimientoCaja, idUsuario, concepto, montoGasto } = req.body;
+    const { idGastoCajaTmp = null, idTerminalWeb, idMovimientoCaja, concepto, montoGasto } = req.body;
 
-    if (!idMovimientoCaja || !idUsuario || !concepto || montoGasto === undefined) {
+    if (!idMovimientoCaja || !idTerminalWeb || !concepto || montoGasto === undefined) {
       res.status(400).json({
         success: false,
-        message: 'Faltan parámetros requeridos (idMovimientoCaja, idUsuario, concepto, montoGasto).'
+        message: 'Faltan parámetros requeridos (idMovimientoCaja, idTerminalWeb, concepto, montoGasto).'
       });
       return;
     }
 
     const inputs = [
+      { name: 'idGastoCajaTmp', type: sql.Int, value: idGastoCajaTmp },
+      { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
       { name: 'idMovimientoCaja', type: sql.Int, value: idMovimientoCaja },
-      { name: 'idUsuario', type: sql.Int, value: idUsuario },
       { name: 'concepto', type: sql.VarChar(100), value: concepto },
       { name: 'montoGasto', type: sql.Money, value: montoGasto }
     ];
 
     await executeRequest({
-      query: 'sp_agregarGastoCaja',
+      query: 'sp_agregarGastCajaTmp',
       inputs: inputs as any,
       isStoredProcedure: true
     });

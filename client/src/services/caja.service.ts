@@ -78,16 +78,12 @@ export const cajaService = {
      * Abre una caja con el monto del arqueo
      */
     abrirCaja: async (
-        idCaja: number,
         idUsuario: number,
-        montoMoneda: number,
         idTerminalWeb: number
     ): Promise<{ success: boolean; idMovimientoCaja?: number; message?: string }> => {
         const response = await axios.post(`${API_URL}/caja/abrir`, {
-            idCaja,
             idUsuario,
-            montoMoneda,
-            idTerminalWeb,
+            idTerminalWeb
         });
         return response.data;
     },

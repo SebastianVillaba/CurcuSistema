@@ -19,3 +19,17 @@ export interface ArqueoCajaTmpItem {
   cantidad: number;
   subtotal: number;
 }
+
+export interface GastoCajaTmpItem {
+  idGastoCajaTmp: number;
+  concepto: string;
+  montoGasto: number;
+  fechaRegistro?: string;
+}
+
+export interface EstadoCaja {
+  estadoCaja: boolean;
+  idMovimientoCaja?: number;
+  nroCaja?: number;
+}
+

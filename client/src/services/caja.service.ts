@@ -17,6 +17,18 @@ export interface ListarArqueoResponse {
     totalArqueo?: number;
 }
 
+export interface GastoCajaTmpItem {
+    idGastoCajaTmp: number;
+    concepto: string;
+    montoGasto: number;
+}
+
+export interface ListarGastoCajaTmpResponse {
+    success: boolean;
+    result: GastoCajaTmpItem[];
+    totalGastos?: number;
+}
+
 /**
  * Denominaciones de billetes en Guaraníes
  * Los IDs corresponden a la base de datos
@@ -92,16 +104,74 @@ export const cajaService = {
      * Cierra una caja con el monto del arqueo
      */
     cerrarCaja: async (
-        idMovimientoCaja: number,
         idUsuarioCierre: number,
-        montoMoneda: number,
         idTerminalWeb: number
     ): Promise<{ success: boolean; message?: string }> => {
         const response = await axios.post(`${API_URL}/caja/cerrar`, {
-            idMovimientoCaja,
             idUsuarioCierre,
-            montoMoneda,
             idTerminalWeb,
+        });
+        return response.data;
+    },
+
+    /**
+     * Elimina una denominación del arqueo temporal
+     */
+    eliminarArqueoCajaTmp: async (
+        idTerminalWeb: number,
+        idArqueoTmp: number
+    ): Promise<{ success: boolean; message?: string }> => {
+        const response = await axios.delete(`${API_URL}/caja/eliminarArqueoCajaTmp`, {
+            params: { idTerminalWeb, idArqueoTmp }
+        });
+        return response.data;
+    },
+
+    /**
+     * Agrega un gasto a la caja
+     */
+    agregarGastoCaja: async (
+        idTerminalWeb: number,
+        idMovimientoCaja: number,
+        concepto: string,
+        montoGasto: number,
+        idGastoCajaTmp: number | null = null
+    ): Promise<{ success: boolean; message?: string }> => {
+        const response = await axios.post(`${API_URL}/caja/gasto`, {
+            idGastoCajaTmp,
+            idTerminalWeb,
+            idMovimientoCaja,
+            concepto,
+            montoGasto
+        });
+        return response.data;
+    },
+
+    /**
+     * Lista los gastos temporales de la caja
+     */
+    listarGastoCajaTmp: async (
+        idTerminalWeb: number
+    ): Promise<ListarGastoCajaTmpResponse> => {
+        const response: ListarGastoCajaTmpResponse = await axios.get(`${API_URL}/caja/gasto`, {
+            params: { idTerminalWeb },
+        });
+        
+        console.log(response.data);
+        
+
+        return response.data;
+    },
+
+    /**
+     * Elimina un gasto temporal de la caja
+     */
+    eliminarGastoCajaTmp: async (
+        idGastoCajaTmp: number,
+        idTerminalWeb: number
+    ): Promise<{ success: boolean; message?: string }> => {
+        const response = await axios.delete(`${API_URL}/caja/eliminarGastoCajaTmp`, {
+            params: { idGastoCajaTmp, idTerminalWeb }
         });
         return response.data;
     },

@@ -189,7 +189,105 @@ export const agregarGastoCaja = async (req: Request, res: Response): Promise<voi
 };
 
 /**
- * Controller para consultar los movimientos de una caja específica
+ * Controller para listar los gastos de la caja
+ */
+export const listarGastoCajaTmp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idTerminalWeb } = req.query;
+
+    if (!idTerminalWeb) {
+      res.status(400).json({
+        success: false,
+        message: 'Faltan parámetros requeridos (idTerminalWeb).'
+      });
+      return;
+    }
+
+    const inputs = [
+      { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
+    ];
+
+    const result = await executeRequest({
+      query: 'sp_listarGastoCajaTmp',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    const detalle = result.recordsets[0];
+    const totalGasto = result.recordsets[1];
+
+    res.status(201).json({
+      success: true,
+      detalle,
+      totalGasto,
+      message: 'Gasto listado exitosamente'
+    });
+
+  } catch (error: any) {
+    if (error.number >= 50000) {
+      res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Error al listar el gasto",
+        error: error.message
+      });
+    }
+  }
+};
+
+/**
+ * Controller para eliminar un gasto temporal de la caja
+ */
+export const eliminarGastoCajaTmp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idGastoCajaTmp, idTerminalWeb } = req.query;
+
+    if (!idGastoCajaTmp || !idTerminalWeb) {
+      res.status(400).json({
+        success: false,
+        message: 'Faltan parámetros requeridos (idGastoCajaTmp, idTerminalWeb).'
+      });
+      return;
+    }
+
+    const inputs = [
+      { name: 'idGastoCajaTmp', type: sql.Int, value: idGastoCajaTmp },
+      { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb }
+    ];
+
+    await executeRequest({
+      query: 'sp_eliminarGastoCajaTmp',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Gasto eliminado exitosamente'
+    });
+
+  } catch (error: any) {
+    if (error.number >= 50000) {
+      res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Error al eliminar el gasto",
+        error: error.message
+      });
+    }
+  }
+}
+
+/**
+ * Controller para consultar los movimientos de una caja específica - YA NO ESTÁ EN USO
  */
 export const consultarMovimientosPorCaja = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -228,7 +326,7 @@ export const consultarMovimientosPorCaja = async (req: Request, res: Response): 
 };
 
 /**
- * Controller para agregar un detalle al arqueo de caja
+ * Controller para agregar un detalle al arqueo de caja 
  */
 export const agregarArqueoCajaTmp = async  (req: Request, res: Response): Promise<void> => {
   try {

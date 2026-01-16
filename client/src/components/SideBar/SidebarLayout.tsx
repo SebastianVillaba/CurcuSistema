@@ -33,7 +33,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import PersonalInjuryIcon from '@mui/icons-material/PersonalInjury';
 import Collapse from '@mui/material/Collapse';
 import { useNavigate } from 'react-router-dom';
-import { LocalHospital } from '@mui/icons-material';
+import { LocalHospital, PointOfSale } from '@mui/icons-material';
 import SettingsIcon from '@mui/icons-material/Settings';
 
 const drawerWidth = 240;
@@ -182,6 +182,13 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       subItems: [
         { text: 'Persona-Entidad', path: '/abm/personas', icon: <PeopleIcon /> },
         { text: 'Productos', path: '/abm/productos', icon: <InventoryIcon /> },
+      ]
+    },
+    {
+      text: 'Caja',
+      icon: <PointOfSale />,
+      subItems: [
+        { text: 'Arqueo de Caja', path: '/caja/arqueo', icon: <ReceiptLongIcon /> },
       ]
     },
     {

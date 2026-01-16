@@ -23,6 +23,7 @@ import rolRoutes from './rol.routes';
 import usuarioRoutes from './usuario.routes';
 import terminalWebRoutes from './terminalWeb.routes';
 import stockInicialRoutes from './stockInicial.routes';
+import denominacionRoutes from './denominacion.routes';
 
 const router = Router();
 
@@ -37,6 +38,7 @@ router.use('/pedido', pedidoRoutes);
 router.use('/reporte', reporteRoutes);
 router.use('/terminal', terminalRoutes);
 router.use('/delivery', deliveryRoutes);
+router.use('/denominacion', denominacionRoutes);
 router.use('/precobranza', precobranzaRoutes);
 router.use('/compras', comprasRoutes);
 router.use('/remisiones', remisionRoutes);

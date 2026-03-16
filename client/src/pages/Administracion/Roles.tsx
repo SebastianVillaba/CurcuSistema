@@ -15,8 +15,7 @@ import {
     Alert,
     Accordion,
     AccordionSummary,
-    AccordionDetails,
-    Divider
+    AccordionDetails
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { rolService } from '../../services/rol.service';

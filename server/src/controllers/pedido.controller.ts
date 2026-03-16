@@ -73,7 +73,7 @@ export const eliminarDetallePedido = async (req: Request, res: Response) => {
 };
 
 export const guardarPedidoFinal = async (req: Request, res: Response) => {
-    const { idUsuarioAlta, idTerminalWeb, idPedidoExistente, idEstadoCobro, idTipoCobro, idCliente, idDelivery, direccion } = req.body;
+    const { idUsuarioAlta, idTerminalWeb, idPedidoExistente, idTipoCobro, idCliente, idDelivery, direccion, fechaEntrega, observacion } = req.body;
 
     try {
         const result = await executeRequest({
@@ -83,11 +83,12 @@ export const guardarPedidoFinal = async (req: Request, res: Response) => {
                 { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta },
                 { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
                 { name: 'idPedidoExistente', type: sql.Int, value: idPedidoExistente },
-                { name: 'idEstadoCobro', type: sql.Int, value: idEstadoCobro },
                 { name: 'idTipoCobro', type: sql.Int, value: idTipoCobro },
                 { name: 'idCliente', type: sql.Int, value: idCliente },
                 { name: 'idDelivery', type: sql.Int, value: idDelivery },
-                { name: 'direccion', type: sql.VarChar(60), value: direccion }
+                { name: 'direccion', type: sql.VarChar(60), value: direccion },
+                { name: 'fechaEntrega', type: sql.Date, value: fechaEntrega },
+                { name: 'observacion', type: sql.VarChar(255), value: observacion }
             ]
         });
         res.status(200).json({ message: 'Pedido guardado correctamente.', idPedido: result.recordset[0].idPedido });
@@ -130,9 +131,211 @@ export const consultaTipoCobro = async (req: Request, res: Response) => {
             isStoredProcedure: false
         });
         res.status(200).json(result.recordset);
-    } catch (error:any) {
+    } catch (error: any) {
         console.error('Error al consultar los tipos de cobro:', error);
         res.status(500).json({ message: 'Error al consultar los tipos de cobro', error: error.message });
     }
 }
 
+export const obtenerDatosPedido = async (req: Request, res: Response) => {
+    const { idPedido } = req.params;
+    const { idTerminalWeb } = req.query;
+
+    try {
+        const result = await executeRequest({
+            query: 'sp_obtenerDatosPedido',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'idPedido', type: sql.Int, value: Number(idPedido) },
+                { name: 'idTerminalWeb', type: sql.Int, value: Number(idTerminalWeb) }
+            ]
+        });
+        res.status(200).json(result.recordset[0] || null);
+    } catch (error) {
+        console.error('Error al obtener datos del pedido:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al obtener datos del pedido', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al obtener datos del pedido', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const facturarPedidosPendientesCliente = async (req: Request, res: Response) => {
+    const { idCliente, idTerminalWeb } = req.body;
+
+    try {
+        const result = await executeRequest({
+            query: 'sp_facturarPedidosPendientesCliente',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'idCliente', type: sql.Int, value: idCliente },
+                { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb }
+            ]
+        });
+        res.status(200).json(result.recordset[0] || null);
+    } catch (error) {
+        console.error('Error al facturar pedidos pendientes del cliente:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al facturar pedidos pendientes del cliente', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al facturar pedidos pendientes del cliente', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const pedidoClienteFacturacion = async (req: Request, res: Response) => {
+    const { idPedido, idTerminalWeb } = req.body;
+
+    try {
+        const result = await executeRequest({
+            query: 'sp_pedidoClienteFacturacion',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'idPedido', type: sql.Int, value: idPedido },
+                { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb }
+            ]
+        });
+        res.status(200).json(result.recordset[0] || null);
+    } catch (error) {
+        console.error('Error al enviar pedido a facturación:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al enviar pedido a facturación', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al enviar pedido a facturación', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const pedidosClienteMasivoAFacturacion = async (req: Request, res: Response) => {
+    const { idTerminalWeb } = req.body;
+
+    try {
+        const result = await executeRequest({
+            query: 'sp_pedidosClienteMasivoAFacturacion',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb }
+            ]
+        });
+        res.status(200).json(result.recordset[0] || null);
+    } catch (error) {
+        console.error('Error al procesar facturación masiva de pedidos:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al procesar facturación masiva de pedidos', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al procesar facturación masiva de pedidos', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const agregarDetPedidoFacturacionTmp = async (req: Request, res: Response) => {
+    const { idTerminalWeb, idPedido } = req.body;
+
+    try {
+        await executeRequest({
+            query: 'sp_agregarDetPedidoFacturacionTmp',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'idTerminalWeb', type: sql.Int, value: idTerminalWeb },
+                { name: 'idPedido', type: sql.Int, value: idPedido }
+            ]
+        });
+        res.status(200).json({ message: 'Pedido agregado a la selección de facturación.' });
+    } catch (error) {
+        console.error('Error al agregar pedido a facturación temporal:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al agregar pedido a facturación temporal', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al agregar pedido a facturación temporal', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const eliminarDetPedidoFacturacionTmp = async (req: Request, res: Response) => {
+    const { idTerminalWeb, idDetPedidoFacturacionTmp } = req.query;
+
+    try {
+        await executeRequest({
+            query: 'sp_eliminarDetPedidoFacturacionTmp',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'idTerminalWeb', type: sql.Int, value: Number(idTerminalWeb) },
+                { name: 'idDetPedidoFacturacionTmp', type: sql.Int, value: Number(idDetPedidoFacturacionTmp) }
+            ]
+        });
+        res.status(200).json({ message: 'Pedido eliminado de la selección de facturación.' });
+    } catch (error) {
+        console.error('Error al eliminar pedido de facturación temporal:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al eliminar pedido de facturación temporal', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al eliminar pedido de facturación temporal', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const consultaPedidoFecha = async (req: Request, res: Response) => {
+    const { fecha } = req.query;
+
+    try {
+        const result = await executeRequest({
+            query: 'sp_consultaPedidoFecha',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'fecha', type: sql.Date, value: fecha }
+            ]
+        });
+        res.status(200).json(result.recordset);
+    } catch (error) {
+        console.error('Error al consultar pedidos por fecha:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al consultar pedidos por fecha', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al consultar pedidos por fecha', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const consultaPedidoFiltro = async (req: Request, res: Response) => {
+    const { nombre, idTipoCobro, habilitarEstado, estadoCobro } = req.query;
+
+    try {
+        const result = await executeRequest({
+            query: 'sp_consultaPedidoFiltro',
+            isStoredProcedure: true,
+            inputs: [
+                { name: 'nombre', type: sql.VarChar(100), value: nombre ?? '' },
+                { name: 'idTipoCobro', type: sql.Int, value: Number(idTipoCobro) },
+                { name: 'habilitarEstado', type: sql.Bit, value: habilitarEstado === 'true' ? 1 : 0 },
+                { name: 'estadoCobro', type: sql.Bit, value: habilitarEstado === 'true' ? (estadoCobro === 'true' ? 1 : 0) : null }
+            ]
+        });
+        res.status(200).json(result.recordset);
+    } catch (error) {
+        console.error('Error al consultar pedidos con filtro:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al consultar pedidos con filtro', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al consultar pedidos con filtro', error: 'An unknown error occurred' });
+        }
+    }
+};
+
+export const limpiarDetPedidoTmp = async (req: Request, res: Response) => {
+    try {
+        const { idTerminalWeb } = req.query;
+        await executeRequest({
+            query: `delete from detPedidoTmp where idTerminalWeb=${idTerminalWeb}`,
+            isStoredProcedure: false
+        });
+        res.status(200).json({ message: 'Detalles del pedido eliminados correctamente.' });
+    } catch (error) {
+        console.error('Error al eliminar detalles del pedido:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al eliminar detalles del pedido', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al eliminar detalles del pedido', error: 'An unknown error occurred' });
+        }
+    }
+}

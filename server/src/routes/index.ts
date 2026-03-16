@@ -24,6 +24,8 @@ import usuarioRoutes from './usuario.routes';
 import terminalWebRoutes from './terminalWeb.routes';
 import stockInicialRoutes from './stockInicial.routes';
 import denominacionRoutes from './denominacion.routes';
+import anulacionRoutes from './anulacion.routes';
+import consultaVentaRoutes from './consultaVenta.routes';
 
 const router = Router();
 
@@ -52,5 +54,7 @@ router.use('/rol', rolRoutes);
 router.use('/usuario', usuarioRoutes);
 router.use('/terminal-web', terminalWebRoutes);
 router.use('/stock-inicial', stockInicialRoutes);
+router.use('/anulacion', anulacionRoutes);
+router.use('/consulta-venta', consultaVentaRoutes);
 
 export default router;

@@ -22,6 +22,7 @@ import { selectTerminalInfo, selectIsTerminalValidated } from '../store/terminal
  * };
  * ```
  */
+
 export const useTerminal = () => {
   const terminalInfo = useAppSelector(selectTerminalInfo);
   const isValidated = useAppSelector(selectIsTerminalValidated);
@@ -35,6 +36,8 @@ export const useTerminal = () => {
     idDepositoVenta: terminalInfo.idDepositoVenta,
     idDepositoRemision: terminalInfo.idDepositoRemision,
     idDepositoCompra: terminalInfo.idDepositoCompra,
+    nroCaja: terminalInfo.nroCaja,
+    estadoCaja: terminalInfo.estadoCaja
   };
 };
 

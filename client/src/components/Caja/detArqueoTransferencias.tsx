@@ -7,9 +7,29 @@ import {
 } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
 
-const DetArqueoTransferencias: React.FC = () => {
+interface DetArqueoTransferenciasProps {
+    disabled?: boolean;
+}
+
+const DetArqueoTransferencias: React.FC<DetArqueoTransferenciasProps> = ({ disabled = false }) => {
     return (
-        <Box>
+        <Box sx={{
+            position: 'relative',
+            ...(disabled && {
+                '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(180, 180, 180, 0.4)',
+                    borderRadius: 1,
+                    zIndex: 1,
+                    pointerEvents: 'none',
+                }
+            })
+        }}>
             <Paper
                 sx={{
                     p: 4,

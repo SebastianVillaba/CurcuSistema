@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -26,6 +26,8 @@ const PagoModal: React.FC<PagoModalProps> = ({
 }) => {
   const [montoCliente, setMontoCliente] = useState<string>('');
   const [vuelto, setVuelto] = useState<number>(0);
+
+  const guardarButtonRef = useRef<HTMLButtonElement>(null);
 
   // Calcular el vuelto cuando cambia el monto del cliente
   useEffect(() => {
@@ -83,6 +85,11 @@ const PagoModal: React.FC<PagoModalProps> = ({
               type="number"
               value={montoCliente}
               onChange={(e) => setMontoCliente(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  guardarButtonRef.current?.click();
+                }
+              }}
               placeholder="0.00"
               autoFocus
               InputProps={{
@@ -137,6 +144,7 @@ const PagoModal: React.FC<PagoModalProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 3, gap: 2 }}>
         <Button
+          ref={guardarButtonRef}
           onClick={handleConfirm}
           variant="contained"
           color="success"

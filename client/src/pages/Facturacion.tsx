@@ -575,38 +575,7 @@ const Facturacion: React.FC = () => {
                     >
                       <PersonSearchIcon />
                     </Button>
-                    <Button
-                      variant='contained'
-                      color={cajaSeleccionada ? 'success' : 'primary'}
-                      sx={{
-                        width: '10vh'
-                      }}
-                      onClick={() => setOpenCajaSelector(true)}
-                      title="Seleccionar Caja"
-                    >
-                      <PointOfSaleIcon />
-                    </Button>
-                    <Button
-                      variant='contained'
-                      color='error'
-                      sx={{
-                        width: '10vh'
-                      }}
-                      onClick={() => setOpenGastoModal(true)}
-                      title="Agregar Gasto"
-                    >
-                      <MoneyOffIcon />
-                    </Button>
-                    <Button
-                      variant='contained'
-                      sx={{
-                        width: '10vh'
-                      }}
-                    >
-                      <SearchIcon />
-                    </Button>
                   </div>
-
                 </Stack>
               </Grid>
               <Grid xs={3}>
@@ -809,7 +778,7 @@ const Facturacion: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid size={6}>
+            <Grid xs={12} md={3}>
               <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                 <Button
                   variant="contained"
@@ -862,16 +831,7 @@ const Facturacion: React.FC = () => {
           open={openTipoComprobanteModal}
           onClose={() => setOpenTipoComprobanteModal(false)}
           onSelectTipo={handleGuardarVenta}
-        />
-
-        {/* Modal de gastos */}
-        <GastoModal
-          open={openGastoModal}
-          onClose={() => setOpenGastoModal(false)}
-          onGastoAgregado={() => {
-            setSuccess('Gasto agregado correctamente');
-          }}
-        />
+        />  
       </Box>
     </RequirePermission>
   );

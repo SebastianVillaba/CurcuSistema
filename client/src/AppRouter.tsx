@@ -27,10 +27,10 @@ import UsuariosABM from './pages/Administracion/UsuariosABM';
 import TerminalesABM from './pages/Administracion/TerminalesABM';
 import StockInicial from './pages/Mercaderia/StockInicial';
 import ArqueoCaja from './pages/Caja/ArqueoCaja';
+import ConsultaVentas from './pages/Consultas/ConsultaVentas';
 
 // Placeholder components for sub-routes
 const ClientesABM = () => <Container><h3>Submenú Clientes (ABM)</h3></Container>;
-const ConsultasVentas = () => <Container><h3>Submenú Consultas de Ventas</h3></Container>;
 const FacturacionClientes = () => <Container><h3>Submenú Facturación (Clientes)</h3></Container>;
 
 const AppRouter: React.FC = () => {
@@ -59,7 +59,6 @@ const AppRouter: React.FC = () => {
           <Route path="clientes" element={<ClientesABM />} />
         </Route>
         <Route path="clientes" element={<Clientes />}>
-          <Route path="consultas-ventas" element={<ConsultasVentas />} />
           <Route path="facturacion-clientes" element={<FacturacionClientes />} />
         </Route>
         <Route path="facturacion" element={<Facturacion />} />
@@ -87,6 +86,9 @@ const AppRouter: React.FC = () => {
           <Route path="funcionarios" element={<PlanillaFuncionarios />} />
         </Route>
         <Route path="auditoria" element={<Auditoria />} />
+        <Route path="consultas">
+          <Route path="ventas" element={<ConsultaVentas />} />
+        </Route>
         <Route path="administracion">
           <Route path="roles" element={<Roles />} />
           <Route path="usuarios" element={<UsuariosABM />} />

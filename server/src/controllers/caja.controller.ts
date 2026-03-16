@@ -98,7 +98,7 @@ export const cerrarCaja = async (req: Request, res: Response): Promise<void> => 
   try {
     const { idTerminalWeb, idUsuarioCierre } = req.body;
 
-    if ( !idUsuarioCierre || !idTerminalWeb) {
+    if (!idUsuarioCierre || !idTerminalWeb) {
       res.status(400).json({
         success: false,
         message: 'Faltan parámetros requeridos (idUsuarioCierre, idTerminalWeb).'
@@ -111,15 +111,19 @@ export const cerrarCaja = async (req: Request, res: Response): Promise<void> => 
       { name: 'idUsuarioCierre', type: sql.Int, value: idUsuarioCierre }
     ];
 
-    await executeRequest({
+    const result = await executeRequest({
       query: 'sp_cerrarCaja',
       inputs: inputs as any,
       isStoredProcedure: true
     });
 
+    // El SP devuelve el idMovimientoCaja cerrado
+    const idMovimientoCaja = result.recordset && result.recordset[0] ? result.recordset[0].idMovimientoCaja : null;
+
     res.status(200).json({
       success: true,
-      message: 'Caja cerrada exitosamente'
+      message: 'Caja cerrada exitosamente',
+      idMovimientoCaja: idMovimientoCaja
     });
 
   } catch (error: any) {
@@ -328,10 +332,10 @@ export const consultarMovimientosPorCaja = async (req: Request, res: Response): 
 /**
  * Controller para agregar un detalle al arqueo de caja 
  */
-export const agregarArqueoCajaTmp = async  (req: Request, res: Response): Promise<void> => {
+export const agregarArqueoCajaTmp = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idTerminalWeb,idDenominacion,cantidad } = req.body;
-    
+    const { idTerminalWeb, idDenominacion, cantidad } = req.body;
+
     if (!idTerminalWeb || !idDenominacion || !cantidad) {
       res.status(400).json({
         success: false,
@@ -379,7 +383,7 @@ export const agregarArqueoCajaTmp = async  (req: Request, res: Response): Promis
 export const listarArqueoCajaTmp = async (req: Request, res: Response): Promise<void> => {
   try {
     const { idTerminalWeb } = req.query as any;
-    
+
     if (!idTerminalWeb) {
       res.status(400).json({
         success: false,
@@ -387,11 +391,11 @@ export const listarArqueoCajaTmp = async (req: Request, res: Response): Promise<
       });
       return;
     }
-    
+
     const inputs = [
       { name: 'idTerminalWeb', type: sql.Int, value: parseInt(idTerminalWeb) }
     ];
-    
+
     const result = await executeRequest({
       query: 'sp_listarArqueoTmp',
       inputs: inputs as any,
@@ -418,7 +422,7 @@ export const listarArqueoCajaTmp = async (req: Request, res: Response): Promise<
 export const eliminarArqueoCajaTmp = async (req: Request, res: Response): Promise<void> => {
   try {
     const { idTerminalWeb, idArqueoTmp } = req.query as any;
-    
+
     if (!idTerminalWeb || !idArqueoTmp) {
       res.status(400).json({
         success: false,
@@ -426,12 +430,12 @@ export const eliminarArqueoCajaTmp = async (req: Request, res: Response): Promis
       });
       return;
     }
-    
+
     const inputs = [
       { name: 'idTerminalWeb', type: sql.Int, value: parseInt(idTerminalWeb) },
       { name: 'idArqueoTmp', type: sql.Int, value: parseInt(idArqueoTmp) }
     ];
-    
+
     const result = await executeRequest({
       query: 'sp_eliminarArqueoTmp',
       inputs: inputs as any,

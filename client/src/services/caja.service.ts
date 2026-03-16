@@ -106,7 +106,7 @@ export const cajaService = {
     cerrarCaja: async (
         idUsuarioCierre: number,
         idTerminalWeb: number
-    ): Promise<{ success: boolean; message?: string }> => {
+    ): Promise<{ success: boolean; message?: string; idMovimientoCaja?: number }> => {
         const response = await axios.post(`${API_URL}/caja/cerrar`, {
             idUsuarioCierre,
             idTerminalWeb,
@@ -156,9 +156,9 @@ export const cajaService = {
         const response: ListarGastoCajaTmpResponse = await axios.get(`${API_URL}/caja/gasto`, {
             params: { idTerminalWeb },
         });
-        
+
         console.log(response.data);
-        
+
 
         return response.data;
     },

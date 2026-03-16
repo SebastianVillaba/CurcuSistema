@@ -14,6 +14,8 @@ export interface TerminalState {
     idDepositoVenta: number | null;
     idDepositoRemision: number | null;
     idDepositoCompra: number | null;
+    nroCaja: number | null;
+    estadoCaja: boolean;
   };
 }
 
@@ -29,6 +31,8 @@ const initialState: TerminalState = {
     idDepositoVenta: null,
     idDepositoRemision: null,
     idDepositoCompra: null,
+    nroCaja: null,
+    estadoCaja: false
   },
 };
 
@@ -47,6 +51,8 @@ export const terminalSlice = createSlice({
       idDepositoVenta?: number;
       idDepositoRemision?: number;
       idDepositoCompra?: number;
+      nroCaja?: number;
+      estadoCaja?: boolean;
     }>) => {
       state.isValidated = true;
       state.isLoading = false;
@@ -74,6 +80,8 @@ export const terminalSlice = createSlice({
         idDepositoVenta: null,
         idDepositoRemision: null,
         idDepositoCompra: null,
+        nroCaja: null,
+        estadoCaja: false
       };
     },
   },

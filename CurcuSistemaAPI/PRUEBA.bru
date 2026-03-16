@@ -4,12 +4,33 @@ meta {
   seq: 1
 }
 
-get {
-  url: 
-  body: none
+post {
+  url: http://localhost:5000/api/ventas
+  body: json
   auth: inherit
+}
+
+body:json {
+  {
+    "cliente": {
+      "nombreApellido": "Sebastian Villalba",
+      "cedula": "5372998",
+      "dv": 9,
+      "direccion": "JORGE MEMMEL",
+      "telefono": "+595983475319",
+      "correo": "sebastianvillalba5432@gmail.com"
+    },
+    "productos": [
+      {
+        "codigo": 100265,
+        "cantidad": 2,
+        "precio": 24500.00
+      }
+    ]
+  }
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

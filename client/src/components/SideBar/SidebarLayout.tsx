@@ -26,7 +26,6 @@ import PeopleIcon from '@mui/icons-material/People';
 import BusinessIcon from '@mui/icons-material/Business';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ReceiptIcon from '@mui/icons-material/Receipt';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -35,6 +34,8 @@ import Collapse from '@mui/material/Collapse';
 import { useNavigate } from 'react-router-dom';
 import { LocalHospital, PointOfSale } from '@mui/icons-material';
 import SettingsIcon from '@mui/icons-material/Settings';
+import HistoryIcon from '@mui/icons-material/History';
+import ListSubheader from '@mui/material/ListSubheader';
 
 const drawerWidth = 240;
 
@@ -110,17 +111,6 @@ interface SidebarLayoutProps {
   children: React.ReactNode;
 }
 
-interface OpenState {
-  compras: boolean;
-  stock: boolean;
-  ventas: boolean;
-  caja: boolean;
-  remisiones: boolean;
-  cobranzas: boolean;
-  pedidoInterno: boolean;
-  sanatorio: boolean;
-}
-
 interface SubMenuItem {
   text: string;
   path: string;
@@ -132,6 +122,11 @@ interface MenuItem {
   path?: string;
   icon: React.ReactNode;
   subItems?: SubMenuItem[];
+}
+
+interface MenuSection {
+  label: string;
+  items: MenuItem[];
 }
 
 export default function SidebarLayout({ children }: SidebarLayoutProps) {
@@ -149,10 +144,8 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   };
 
   const handleLogout = () => {
-    // Limpiar localStorage
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
-    // Redirigir al login
     navigate('/login');
   };
 
@@ -163,94 +156,189 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     }));
   };
 
-  const menuItems: MenuItem[] = [
+  const menuSections: MenuSection[] = [
+    // ──────────────── ABM ────────────────
     {
-      text: 'Facturación',
-      path: '/facturacion',
-      icon: <ReceiptIcon />
+      label: 'ABM',
+      items: [
+        {
+          text: 'ABM',
+          icon: <InboxIcon />,
+          subItems: [
+            { text: 'Persona-Entidad', path: '/abm/personas', icon: <PeopleIcon /> },
+            { text: 'Productos', path: '/abm/productos', icon: <InventoryIcon /> },
+          ],
+        },
+      ],
     },
+    // ──────────────── MOVIMIENTOS ────────────────
     {
-      text: 'Clientes',
-      icon: <BusinessIcon />,
-      subItems: [
-        { text: 'Pedidos', path: '/pedidos', icon: <ReceiptLongIcon /> }
-      ]
+      label: 'Movimientos',
+      items: [
+        {
+          text: 'Facturación',
+          path: '/facturacion',
+          icon: <ReceiptIcon />,
+        },
+        {
+          text: 'Pedidos',
+          path: '/pedidos',
+          icon: <ReceiptLongIcon />,
+        },
+        {
+          text: 'Arqueo de Caja',
+          icon: <PointOfSale />,
+          subItems: [
+            { text: 'Arqueo de Caja', path: '/caja/arqueo', icon: <ReceiptLongIcon /> },
+          ],
+        },
+        {
+          text: 'Compras',
+          path: '/compras',
+          icon: <ShoppingCartIcon />,
+        },
+        {
+          text: 'Sucursales',
+          icon: <BusinessIcon />,
+          subItems: [
+            { text: 'Remisiones', path: '/remisiones', icon: <ReceiptIcon /> },
+            { text: 'Recepciones Pendientes', path: '/recepciones-pendientes', icon: <InventoryIcon /> },
+          ],
+        },
+        {
+          text: 'Pedido Interno',
+          icon: <RequestQuoteIcon />,
+          subItems: [
+            { text: 'Generar Pedido', path: '/pedido-interno/generar', icon: <ReceiptIcon /> },
+            { text: 'Consulta Pedido', path: '/pedido-interno/consulta', icon: <ReceiptLongIcon /> },
+          ],
+        },
+        {
+          text: 'Ajuste / Stock Inicial',
+          icon: <InventoryIcon />,
+          subItems: [
+            { text: 'Ajustes', path: '/mercaderia/ajustes', icon: <InventoryIcon /> },
+            { text: 'Stock Inicial', path: '/mercaderia/stock-inicial', icon: <InventoryIcon /> },
+          ],
+        },
+        {
+          text: 'Sanatorio',
+          icon: <LocalHospital />,
+          subItems: [
+            { text: 'Pacientes', path: '/sanatorio/pacientes', icon: <PersonalInjuryIcon /> },
+            { text: 'Funcionarios', path: '/sanatorio/funcionarios', icon: <PeopleIcon /> },
+          ],
+        },
+      ],
     },
+    // ──────────────── CONSULTAS ────────────────
     {
-      text: 'ABM',
-      icon: <InboxIcon />,
-      subItems: [
-        { text: 'Persona-Entidad', path: '/abm/personas', icon: <PeopleIcon /> },
-        { text: 'Productos', path: '/abm/productos', icon: <InventoryIcon /> },
-      ]
+      label: 'Consultas',
+      items: [
+        {
+          text: 'Consulta Ventas',
+          path: '/consultas/ventas',
+          icon: <ReceiptLongIcon />,
+        },
+      ],
     },
+    // ──────────────── REPORTES ────────────────
     {
-      text: 'Caja',
-      icon: <PointOfSale />,
-      subItems: [
-        { text: 'Arqueo de Caja', path: '/caja/arqueo', icon: <ReceiptLongIcon /> },
-      ]
+      label: 'Reportes',
+      items: [
+        // Los módulos de reportes serán añadidos aquí próximamente
+      ],
     },
+    // ──────────────── ADMINISTRACIÓN ────────────────
     {
-      text: 'Cobranzas',
-      icon: <AttachMoneyIcon />,
-      subItems: [
-        { text: 'Precobranza', path: '/cobranzas/precobranza', icon: <ReceiptLongIcon /> },
-        { text: 'Cobranza', path: '/cobranzas/cobranza', icon: <RequestQuoteIcon /> },
-      ]
-    },
-    {
-      text: 'Compras',
-      path: '/compras',
-      icon: <ShoppingCartIcon />
-    },
-    {
-      text: 'Sucursales',
-      icon: <BusinessIcon />, // Reusing BusinessIcon or finding another one like StoreIcon if available, but BusinessIcon is imported.
-      subItems: [
-        { text: 'Remisiones', path: '/remisiones', icon: <ReceiptIcon /> }, // Reusing ReceiptIcon
-        { text: 'Recepciones Pendientes', path: '/recepciones-pendientes', icon: <InventoryIcon /> },
-      ]
-    },
-    {
-      text: 'Pedido Interno',
-      icon: <RequestQuoteIcon />,
-      subItems: [
-        { text: 'Generar Pedido', path: '/pedido-interno/generar', icon: <ReceiptIcon /> },
-        { text: 'Consulta Pedido', path: '/pedido-interno/consulta', icon: <ReceiptLongIcon /> },
-      ]
-    },
-    {
-      text: 'Mercaderia',
-      icon: <InventoryIcon />,
-      subItems: [
-        { text: 'Ajustes', path: '/mercaderia/ajustes', icon: <InventoryIcon /> },
-        { text: 'Stock Inicial', path: '/mercaderia/stock-inicial', icon: <InventoryIcon /> },
-      ]
-    },
-    {
-      text: 'Sanatorio',
-      icon: <LocalHospital />,
-      subItems: [
-        { text: 'Pacientes', path: '/sanatorio/pacientes', icon: <PersonalInjuryIcon /> },
-        { text: 'Funcionarios', path: '/sanatorio/funcionarios', icon: <PeopleIcon /> },
-      ]
-    },
-    {
-      text: 'Auditoría',
-      path: '/auditoria',
-      icon: <ReceiptLongIcon /> // Using ReceiptLongIcon as a placeholder for Audit log
-    },
-    {
-      text: 'Administración',
-      icon: <SettingsIcon />, // Changed to SettingsIcon
-      subItems: [
-        { text: 'Roles', path: '/administracion/roles', icon: <PeopleIcon /> },
-        { text: 'Usuarios', path: '/administracion/usuarios', icon: <PeopleIcon /> },
-        { text: 'Terminales', path: '/administracion/terminales', icon: <InventoryIcon /> },
-      ]
+      label: 'Administración',
+      items: [
+        {
+          text: 'Administración',
+          icon: <SettingsIcon />,
+          subItems: [
+            { text: 'Roles', path: '/administracion/roles', icon: <PeopleIcon /> },
+            { text: 'Usuarios', path: '/administracion/usuarios', icon: <PeopleIcon /> },
+            { text: 'Terminales', path: '/administracion/terminales', icon: <InventoryIcon /> },
+          ],
+        },
+        {
+          text: 'Auditoría',
+          path: '/auditoria',
+          icon: <HistoryIcon />,
+        },
+      ],
     },
   ];
+
+  const renderMenuItem = (item: MenuItem) => (
+    <React.Fragment key={item.text}>
+      <ListItem disablePadding sx={{ display: 'block' }}>
+        <ListItemButton
+          onClick={() => {
+            if (item.subItems) {
+              handleSubMenuToggle(item.text);
+            } else if (item.path) {
+              navigate(item.path);
+            }
+          }}
+          sx={{
+            minHeight: 48,
+            justifyContent: open ? 'initial' : 'center',
+            px: 2.5,
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: 0,
+              mr: open ? 3 : 'auto',
+              justifyContent: 'center',
+            }}
+          >
+            {item.icon}
+          </ListItemIcon>
+          <ListItemText primary={item.text} sx={{ opacity: open ? 1 : 0 }} />
+          {item.subItems && open && (
+            openSubMenus[item.text] ? <ExpandLess /> : <ExpandMore />
+          )}
+        </ListItemButton>
+      </ListItem>
+
+      {/* Submenú desplegable */}
+      {item.subItems && (
+        <Collapse in={openSubMenus[item.text]} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {item.subItems.map((subItem) => (
+              <ListItem key={subItem.text} disablePadding sx={{ display: 'block' }}>
+                <ListItemButton
+                  onClick={() => navigate(subItem.path)}
+                  sx={{
+                    minHeight: 48,
+                    justifyContent: open ? 'initial' : 'center',
+                    pl: 4,
+                    px: 2.5,
+                  }}
+                >
+                  {subItem.icon && (
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 0,
+                        mr: open ? 3 : 'auto',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {subItem.icon}
+                    </ListItemIcon>
+                  )}
+                  <ListItemText primary={subItem.text} sx={{ opacity: open ? 1 : 0 }} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Collapse>
+      )}
+    </React.Fragment>
+  );
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -288,76 +376,42 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
           </IconButton>
         </DrawerHeader>
         <Divider />
-        <List>
-          {menuItems.map((item) => (
-            <React.Fragment key={item.text}>
-              <ListItem disablePadding sx={{ display: 'block' }}>
-                <ListItemButton
-                  onClick={() => {
-                    if (item.subItems) {
-                      handleSubMenuToggle(item.text);
-                    } else if (item.path) {
-                      navigate(item.path);
-                    }
-                  }}
-                  sx={{
-                    minHeight: 48,
-                    justifyContent: open ? 'initial' : 'center',
-                    px: 2.5,
-                  }}
-                >
-                  <ListItemIcon
+        {menuSections.map((section, sectionIndex) => (
+          <React.Fragment key={section.label}>
+            <List
+              subheader={
+                open ? (
+                  <ListSubheader
+                    component="div"
                     sx={{
-                      minWidth: 0,
-                      mr: open ? 3 : 'auto',
-                      justifyContent: 'center',
+                      fontWeight: 700,
+                      fontSize: '0.70rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'text.secondary',
+                      lineHeight: '32px',
+                      mt: sectionIndex === 0 ? 0 : 0.5,
                     }}
                   >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} sx={{ opacity: open ? 1 : 0 }} />
-                  {item.subItems && open && (
-                    openSubMenus[item.text] ? <ExpandLess /> : <ExpandMore />
-                  )}
-                </ListItemButton>
-              </ListItem>
-
-              {/* Submenú desplegable */}
-              {item.subItems && (
-                <Collapse in={openSubMenus[item.text]} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
-                    {item.subItems.map((subItem) => (
-                      <ListItem key={subItem.text} disablePadding sx={{ display: 'block' }}>
-                        <ListItemButton
-                          onClick={() => navigate(subItem.path)}
-                          sx={{
-                            minHeight: 48,
-                            justifyContent: open ? 'initial' : 'center',
-                            pl: 4,
-                            px: 2.5,
-                          }}
-                        >
-                          {subItem.icon && (
-                            <ListItemIcon
-                              sx={{
-                                minWidth: 0,
-                                mr: open ? 3 : 'auto',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              {subItem.icon}
-                            </ListItemIcon>
-                          )}
-                          <ListItemText primary={subItem.text} sx={{ opacity: open ? 1 : 0 }} />
-                        </ListItemButton>
-                      </ListItem>
-                    ))}
-                  </List>
-                </Collapse>
+                    {section.label}
+                  </ListSubheader>
+                ) : undefined
+              }
+            >
+              {section.items.length === 0 && open && (
+                <ListItem>
+                  <ListItemText
+                    primary="— próximamente —"
+                    primaryTypographyProps={{ fontSize: '0.75rem', color: 'text.disabled' }}
+                    sx={{ pl: 1 }}
+                  />
+                </ListItem>
               )}
-            </React.Fragment>
-          ))}
-        </List>
+              {section.items.map((item) => renderMenuItem(item))}
+            </List>
+            {sectionIndex < menuSections.length - 1 && <Divider />}
+          </React.Fragment>
+        ))}
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <DrawerHeader />

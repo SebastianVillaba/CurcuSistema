@@ -25,14 +25,16 @@ import DetArqueoTransferencias from '../../components/Caja/detArqueoTransferenci
 import RequirePermission from '../../components/RequirePermission';
 import { useTerminal } from '../../hooks/useTerminal';
 import { cajaService } from '../../services/caja.service';
+import { reporteService } from '../../services/reporte.service';
+import { ticketService } from '../../services/ticket.service';
 
 const ArqueoCaja: React.FC = () => {
-    const { idTerminalWeb } = useTerminal();
+    const { idTerminalWeb, nroCaja, estadoCaja } = useTerminal();
 
     // Estado de la caja
     const [cajaAbierta, setCajaAbierta] = useState(false);
     const [idMovimientoCaja, setIdMovimientoCaja] = useState<number | null>(null);
-    const [nroCaja, setNroCaja] = useState<number | null>(null);
+    const [nroCajaEstado, setNroCajaEstado] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -43,15 +45,10 @@ const ArqueoCaja: React.FC = () => {
 
     // Verificar estado de caja al cargar
     useEffect(() => {
-        const idMovimiento = localStorage.getItem('idMovimientoCaja');
-        const idCaja = localStorage.getItem('idCajaActual');
-
-        if (idMovimiento) {
-            setIdMovimientoCaja(parseInt(idMovimiento));
+        if (idTerminalWeb && nroCaja && estadoCaja) {
+            setIdMovimientoCaja(nroCaja);
             setCajaAbierta(true);
-        }
-        if (idCaja) {
-            setNroCaja(parseInt(idCaja));
+            setNroCajaEstado(nroCaja);
         }
     }, []);
 
@@ -82,7 +79,7 @@ const ArqueoCaja: React.FC = () => {
 
                 setIdMovimientoCaja(response.idMovimientoCaja);
                 setCajaAbierta(true);
-                setNroCaja(1); // TODO: Obtener del backend
+                setNroCajaEstado(1); // TODO: Obtener del backend
                 setSuccess('Caja abierta exitosamente');
             }
         } catch (err: any) {
@@ -120,8 +117,20 @@ const ArqueoCaja: React.FC = () => {
 
                 setIdMovimientoCaja(null);
                 setCajaAbierta(false);
-                setNroCaja(null);
+                setNroCajaEstado(null);
                 setSuccess('Caja cerrada exitosamente');
+
+                // Generar reporte de cierre de caja
+                if (response.idMovimientoCaja) {
+                    try {
+                        const datosReporte = await reporteService.obtenerDatosCierreCaja(response.idMovimientoCaja);
+                        const TicketService = new ticketService();
+                        await TicketService.generarTicketCierreCaja(datosReporte);
+                    } catch (reporteError: any) {
+                        console.error('Error al generar reporte de cierre:', reporteError);
+                        setError('Caja cerrada pero hubo un error al generar el reporte');
+                    }
+                }
             }
         } catch (err: any) {
             console.error('Error al cerrar caja:', err);
@@ -162,9 +171,9 @@ const ArqueoCaja: React.FC = () => {
                                         Arqueo de Caja
                                     </Typography>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                                        {nroCaja && (
+                                        {nroCajaEstado && (
                                             <Chip
-                                                label={`Caja Nro: ${nroCaja}`}
+                                                label={`Caja Nro: ${nroCajaEstado}`}
                                                 sx={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
                                             />
                                         )}
@@ -287,13 +296,19 @@ const ArqueoCaja: React.FC = () => {
                                         📝 Gastos
                                     </Typography>
                                 }
-                                sx={{ backgroundColor: '#ffebee', borderBottom: '1px solid #ffcdd2' }}
+                                sx={{
+                                    backgroundColor: cajaAbierta
+                                        ? 'rgba(251, 209, 209, 1)'
+                                        : 'rgba(180, 180, 180, 0.4)',
+                                    borderBottom: '1px solid #ffcdd2'
+                                }}
                             />
                             <CardContent>
                                 <DetArqueoGastos
                                     idTerminalWeb={idTerminalWeb || 0}
                                     idMovimientoCaja={idMovimientoCaja}
                                     onTotalChange={setTotalGastos}
+                                    disabled={!cajaAbierta}
                                 />
                             </CardContent>
                         </Card>
@@ -309,10 +324,15 @@ const ArqueoCaja: React.FC = () => {
                                         🔄 Transferencias
                                     </Typography>
                                 }
-                                sx={{ backgroundColor: '#e3f2fd', borderBottom: '1px solid #bbdefb' }}
+                                sx={{
+                                    backgroundColor: cajaAbierta
+                                        ? '#e3f2fd'
+                                        : 'rgba(180, 180, 180, 0.4)',
+                                    borderBottom: '1px solid #bbdefb'
+                                }}
                             />
                             <CardContent>
-                                <DetArqueoTransferencias />
+                                <DetArqueoTransferencias disabled={!cajaAbierta} />
                             </CardContent>
                         </Card>
                     </Grid>

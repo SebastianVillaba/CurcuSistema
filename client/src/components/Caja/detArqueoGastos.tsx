@@ -26,6 +26,7 @@ interface DetArqueoGastosProps {
     idTerminalWeb: number;
     idMovimientoCaja: number | null;
     onTotalChange?: (total: number) => void;
+    disabled?: boolean;
 }
 
 interface GastoLocal extends GastoCajaTmpItem {
@@ -39,10 +40,15 @@ interface EditingGasto {
     montoGasto: string;
 }
 
+// cajaAbierta
+//                                             ? 'rgba(251, 209, 209, 1)'
+//                                             : 'rgba(180, 180, 180, 0.4)'
+
 const DetArqueoGastos: React.FC<DetArqueoGastosProps> = ({
     idTerminalWeb,
     idMovimientoCaja,
     onTotalChange,
+    disabled = false,
 }) => {
     const [gastos, setGastos] = useState<GastoLocal[]>([]);
     const [saving, setSaving] = useState(false);
@@ -261,7 +267,7 @@ const DetArqueoGastos: React.FC<DetArqueoGastosProps> = ({
             const response = await cajaService.listarGastoCajaTmp(idTerminalWeb);
 
             console.log(response);
-            
+
 
             if (response.success) {
                 setGastos(response.detalle);
@@ -282,7 +288,23 @@ const DetArqueoGastos: React.FC<DetArqueoGastosProps> = ({
     };
 
     return (
-        <Box>
+        <Box sx={{
+            position: 'relative',
+            ...(disabled && {
+                '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(180, 180, 180, 0.4)',
+                    borderRadius: 1,
+                    zIndex: 1,
+                    pointerEvents: 'none',
+                }
+            })
+        }}>
             {/* Botón para agregar gasto */}
             <Button
                 ref={addButtonRef}
@@ -290,7 +312,7 @@ const DetArqueoGastos: React.FC<DetArqueoGastosProps> = ({
                 color="error"
                 startIcon={<AddIcon />}
                 onClick={handleAgregarFila}
-                disabled={saving || nuevaFila !== null || !idMovimientoCaja}
+                disabled={saving || nuevaFila !== null || !idMovimientoCaja || disabled}
                 sx={{ mb: 2 }}
             >
                 Agregar Gasto

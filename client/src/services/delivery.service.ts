@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/deliv
 
 export const deliveryService = {
     getDeliveryActivo: async () => {
-        const response = await axios.get(`${API_URL}/activo`, );
+        const response = await axios.get(`${API_URL}/delivery/activo`, );
         return response.data;
     },
 };

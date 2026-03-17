@@ -118,7 +118,8 @@ export const cerrarCaja = async (req: Request, res: Response): Promise<void> => 
     });
 
     // El SP devuelve el idMovimientoCaja cerrado
-    const idMovimientoCaja = result.recordset && result.recordset[0] ? result.recordset[0].idMovimientoCaja : null;
+    const record = result.recordset && result.recordset[0] ? result.recordset[0] : null;
+    const idMovimientoCaja = record ? (record.idMovimientoCaja || record.ID_MovimientoCaja || null) : null;
 
     res.status(200).json({
       success: true,

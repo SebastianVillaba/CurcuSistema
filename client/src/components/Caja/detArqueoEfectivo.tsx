@@ -78,7 +78,8 @@ const DetArqueoEfectivo: React.FC<DetArqueoEfectivoProps> = ({
         try {
             const response = await cajaService.listarArqueoCajaTmp(idTerminalWeb);
             if (response.success) {
-                setItems(response.result.map(item => ({ ...item, isNew: false, isEditing: false })));
+                const sortedItems = response.result.sort((a, b) => a.idArqueoTmp - b.idArqueoTmp);
+                setItems(sortedItems.map(item => ({ ...item, isNew: false, isEditing: false })));
             }
         } catch (error) {
             console.error('Error al cargar arqueo:', error);

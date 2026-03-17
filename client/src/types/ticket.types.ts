@@ -157,3 +157,13 @@ export interface DatosTicketRemision {
   items: ItemTicketRemision[];
 }
 
+export interface ItemPedidoDia {
+  codigo: number | string;
+  nombre: string;
+  cantidad: number;
+}
+
+export interface DatosTicketPedidosDia {
+  fechaImpresion: Date;
+  items: ItemPedidoDia[];
+}

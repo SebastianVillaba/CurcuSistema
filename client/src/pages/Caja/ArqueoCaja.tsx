@@ -121,11 +121,11 @@ const ArqueoCaja: React.FC = () => {
                 setSuccess('Caja cerrada exitosamente');
 
                 // Generar reporte de cierre de caja
-                if (response.idMovimientoCaja) {
+                const idParaReporte = response.idMovimientoCaja || idMovimientoCaja;
+                if (idParaReporte) {
                     try {
-                        const datosReporte = await reporteService.obtenerDatosCierreCaja(response.idMovimientoCaja);
-                        const TicketService = new ticketService();
-                        await TicketService.generarTicketCierreCaja(datosReporte);
+                        const datosReporte = await reporteService.obtenerDatosCierreCaja(idParaReporte);
+                        await ticketService.generarTicketCierreCaja(datosReporte);
                     } catch (reporteError: any) {
                         console.error('Error al generar reporte de cierre:', reporteError);
                         setError('Caja cerrada pero hubo un error al generar el reporte');

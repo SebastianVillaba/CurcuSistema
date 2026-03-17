@@ -1,10 +1,10 @@
-import type { ItemFactura, DatosFactura, ItemTicket, DatosTicket, DatosTicketPedido, DatosCierreCaja, ItemTicketRemision, DatosTicketRemision } from "../types/ticket.types";
+import type { ItemFactura, DatosFactura, ItemTicket, DatosTicket, DatosTicketPedido, DatosCierreCaja, ItemTicketRemision, DatosTicketRemision, DatosTicketPedidosDia } from "../types/ticket.types";
 import jsPDF from "jspdf";
 
 
 class TicketService {
 
-    private readonly ANCHO_TICKET = 80; // Ancho del ticket para impresoras de 80mm
+    private readonly ANCHO_TICKET = 73.6; // Ancho del ticket para impresoras de 80mm
     private readonly MARGEN_IZQ = 2;
     private posY = 10; // Posición Y inicial
 
@@ -17,7 +17,7 @@ class TicketService {
         const doc = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: [this.ANCHO_TICKET, 297]
+            format: [this.ANCHO_TICKET, 306.3]
         });
 
 
@@ -74,7 +74,7 @@ class TicketService {
         const doc = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: [this.ANCHO_TICKET, 297]
+            format: [this.ANCHO_TICKET, 306.3]
         });
 
         this.posY = 10;
@@ -92,7 +92,7 @@ class TicketService {
         const doc = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: [this.ANCHO_TICKET, 297]
+            format: [this.ANCHO_TICKET, 306.3]
         });
 
         this.posY = 10;
@@ -103,6 +103,74 @@ class TicketService {
         this.dibujarItemsRemision(doc, datos.items);
         this.dibujarFooterRemision(doc);
 
+        doc.autoPrint();
+        window.open(doc.output('bloburl'), '_blank');
+    }
+
+    public async generarTicketPedidosDia(datos: DatosTicketPedidosDia): Promise<void> {
+        let alturaContent = 10; // margen superior
+        alturaContent += 16; // encabezado
+        alturaContent += 12; // info
+        alturaContent += datos.items.length * 6; // items
+        alturaContent += 20; // footer
+
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: [this.ANCHO_TICKET, Math.max(alturaContent, 100)]
+        });
+
+        this.posY = 10;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text('PEDIDOS DEL DIA', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
+        this.posY += 8;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Fecha Impresión: ${this.formatearFecha(datos.fechaImpresion)}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 6;
+
+        this.dibujarLinea(doc);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+
+        doc.text('Cod.', this.MARGEN_IZQ, this.posY);
+        doc.text('Nombre', this.MARGEN_IZQ + 12, this.posY);
+        doc.text('Cant.', this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+        this.posY += 5;
+
+        this.dibujarLinea(doc);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+
+        datos.items.forEach(item => {
+            doc.text(String(item.codigo), this.MARGEN_IZQ, this.posY);
+            
+            const lineasNombre = this.dividirTexto(item.nombre || '', 20);
+            doc.text(lineasNombre[0] || '', this.MARGEN_IZQ + 12, this.posY);
+            doc.text(this.formatearNumero(item.cantidad, 0), this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+            
+            this.posY += 4;
+            
+            if (lineasNombre.length > 1) {
+                lineasNombre.slice(1).forEach((linea) => {
+                    doc.text(linea, this.MARGEN_IZQ + 12, this.posY);
+                    this.posY += 4;
+                });
+            }
+            this.posY += 2;
+        });
+
+        this.dibujarLinea(doc);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text('*** FIN DEL REPORTE ***', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
+        
         doc.autoPrint();
         window.open(doc.output('bloburl'), '_blank');
     }
@@ -676,7 +744,7 @@ class TicketService {
 class FacturaService {
 
 
-    private readonly ANCHO_TICKET = 80; // Ancho del ticket para impresoras de 80mm
+    private readonly ANCHO_TICKET = 73.6; // Ancho del ticket para impresoras de 80mm
     private readonly MARGEN_IZQ = 2;
     private posY = 10; // Posición Y inicial
 
@@ -690,7 +758,7 @@ class FacturaService {
         const doc = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: [this.ANCHO_TICKET, 297]
+            format: [this.ANCHO_TICKET, 306.3]
         });
 
 
@@ -758,7 +826,7 @@ class FacturaService {
 
 
         // Dirección
-        const lineasDireccion = this.dividirTexto(datos.direccion, 40);
+        const lineasDireccion = this.dividirTexto(datos.direccion, 30);
         for (let linea = 0; linea < lineasDireccion.length; linea++) {
             if (linea === 0) {
                 doc.text(`Dirección: ${lineasDireccion[linea]}`, this.MARGEN_IZQ, this.posY);

@@ -15,10 +15,6 @@ import {
   Chip,
   Stack,
   Divider,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   IconButton,
   Tooltip,
   Alert,
@@ -31,6 +27,7 @@ import LastPageIcon from '@mui/icons-material/LastPage';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import { consultaVentaService } from '../../services/consultaVenta.service';
 
 // ──────────────────────────────────────────────
 // Tipos (se completarán cuando lleguen los SPs)
@@ -46,6 +43,7 @@ interface VentaCabecera {
   total: number;
   estado: 'ACTIVO' | 'ANULADO';
   tipoVenta: string;
+  tipoPago?: string;
 }
 
 interface VentaDetalle {
@@ -72,8 +70,6 @@ const ConsultaVentas: React.FC = () => {
     new Date().toISOString().split('T')[0]
   );
   const [nroFactura, setNroFactura] = useState('');
-  const [clienteFiltro, setClienteFiltro] = useState('');
-  const [estadoFiltro, setEstadoFiltro] = useState<'TODOS' | 'ACTIVO' | 'ANULADO'>('TODOS');
 
   // ── Resultados ─────────────────────────────
   const [ventas, setVentas] = useState<VentaCabecera[]>([]);
@@ -93,11 +89,40 @@ const ConsultaVentas: React.FC = () => {
     setDetalles([]);
 
     try {
-      // TODO: Conectar con el servicio cuando estén los SPs
-      // const result = await consultaVentasService.buscarVentas({ fechaDesde, fechaHasta, nroFactura, clienteFiltro, estadoFiltro });
-      // setVentas(result);
-      // if (result.length > 0) { setCurrentIndex(0); setSelectedVenta(result[0]); }
-      setVentas([]);
+      let result;
+      if (nroFactura.trim() !== '') {
+        const parts = nroFactura.split('-');
+        let dsuc = 1, dcaja = 1, dfactu = parseInt(nroFactura, 10);
+        if (parts.length === 3) {
+          dsuc = parseInt(parts[0], 10);
+          dcaja = parseInt(parts[1], 10);
+          dfactu = parseInt(parts[2], 10);
+        }
+        
+        if (isNaN(dfactu)) {
+          throw new Error('El formato de factura no es válido.');
+        }
+
+        result = await consultaVentaService.consultaVentaNroFactura(dsuc, dcaja, dfactu);
+      } else {
+        result = await consultaVentaService.consultaVentaFecha(fechaDesde, fechaHasta, 1);
+      }
+
+      const mapped = result.map((v: any) => ({
+        idVenta: v.idVenta,
+        nroFactura: v.factura,
+        fechaHora: new Date(v.fechaAlta).toLocaleString('es-PY'),
+        cliente: v.nombreCliente,
+        ruc: v.ruc,
+        usuario: v.usuario,
+        sucursal: v.nombreSucursal || '',
+        total: v.totalVenta,
+        estado: v.estado,
+        tipoVenta: v.nombreTipo,
+        tipoPago: ''
+      }));
+
+      setVentas(mapped);
     } catch (err: any) {
       setError(err.message || 'Error al buscar ventas');
     } finally {
@@ -113,12 +138,23 @@ const ConsultaVentas: React.FC = () => {
   const handleSelectVenta = async (venta: VentaCabecera, index: number) => {
     setSelectedVenta(venta);
     setCurrentIndex(index);
+    setError('');
 
     try {
-      // TODO: Conectar con el servicio cuando estén los SPs
-      // const det = await consultaVentasService.obtenerDetalle(venta.idVenta);
-      // setDetalles(det);
-      setDetalles([]);
+      const resp = await consultaVentaService.consultaInformacionVenta(venta.idVenta);
+      
+      const mappedDetalles = resp.detalle.map((d: any) => ({
+        nro: d.Nro,
+        codigo: d.codigo,
+        descripcion: d.nombreProducto,
+        cantidad: d.cantidad,
+        precio: d.precioUnitario,
+        subtotal: d.subtotal,
+        exenta: 0,
+        iva5: 0,
+        iva10: 0
+      }));
+      setDetalles(mappedDetalles);
     } catch (err: any) {
       setError(err.message || 'Error al obtener el detalle');
     }
@@ -191,29 +227,8 @@ const ConsultaVentas: React.FC = () => {
             onChange={(e) => setNroFactura(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="001-001-0000001"
-            sx={{ minWidth: 165 }}
-          />
-          <TextField
-            label="Cliente"
-            size="small"
-            value={clienteFiltro}
-            onChange={(e) => setClienteFiltro(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Nombre o RUC"
             sx={{ minWidth: 200, flex: 1 }}
           />
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Estado</InputLabel>
-            <Select
-              value={estadoFiltro}
-              label="Estado"
-              onChange={(e) => setEstadoFiltro(e.target.value as typeof estadoFiltro)}
-            >
-              <MenuItem value="TODOS">Todos</MenuItem>
-              <MenuItem value="ACTIVO">Activo</MenuItem>
-              <MenuItem value="ANULADO">Anulado</MenuItem>
-            </Select>
-          </FormControl>
           <Button
             variant="contained"
             startIcon={<SearchIcon />}

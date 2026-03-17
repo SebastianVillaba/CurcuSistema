@@ -23,15 +23,11 @@ export interface GuardarPedidoRequest {
     observacion: string;
 }
 
-export interface PedidoDia {
-    nro: number;
-    idPedido: number;
-    nombreCliente: string;
-    nombreTipo: string;
-    fechaAlta: string;
-    total?: number;
+export interface ItemPedidoDia {
+    codigo: number | string;
+    nombre: string;
+    cantidad: number;
 }
-
 export interface DetallePedido {
     idDetPedidoTmp: number;
     idProducto: number;
@@ -128,13 +124,9 @@ export const pedidoService = {
         }
     },
 
-    consultarPedidosDia: async (idTerminalWeb: number): Promise<PedidoDia[]> => {
+    consultarPedidosDia: async (): Promise<ItemPedidoDia[]> => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/pedido/dia`, {
-                params: {
-                    idTerminalWeb
-                }
-            });
+            const response = await axios.get(`${API_BASE_URL}/pedido/dia`);
             return response.data;
         } catch (error: any) {
             console.error('Error al consultar los pedidos del día:', error);

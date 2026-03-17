@@ -103,15 +103,10 @@ export const guardarPedidoFinal = async (req: Request, res: Response) => {
 };
 
 export const consultaPedidosDia = async (req: Request, res: Response) => {
-    const { idTerminalWeb } = req.query;
-
     try {
         const result = await executeRequest({
-            query: 'sp_consultaPedidosDia',
+            query: 'sp_consultaListadoPedidosDia',
             isStoredProcedure: true,
-            inputs: [
-                { name: 'idTerminalWeb', type: sql.Int, value: Number(idTerminalWeb) }
-            ]
         });
         res.status(200).json(result.recordset);
     } catch (error) {

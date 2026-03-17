@@ -358,6 +358,24 @@ const Pedidos: React.FC = () => {
     }
   };
 
+  const handleImprimirPedidosDia = async () => {
+    try {
+      const pedidos = await pedidoService.consultarPedidosDia();
+      if (!pedidos || pedidos.length === 0) {
+        alert('No hay pedidos para el día actual.');
+        return;
+      }
+
+      await ticketService.generarTicketPedidosDia({
+        fechaImpresion: new Date(),
+        items: pedidos
+      });
+    } catch (error) {
+      console.error('Error obteniendo o imprimiendo pedidos del día:', error);
+      alert('Ocurrió un error al generar la lista de pedidos del día.');
+    }
+  };
+
   // Factura el pedido actualmente seleccionado en la lista
   const handleFacturarPedido = async () => {
     if (!pedidoSeleccionado || !idTerminalWeb || !pedidoSeleccionado.idPedido) {
@@ -1029,6 +1047,16 @@ const Pedidos: React.FC = () => {
             </Paper>
           </Grid>
         </Grid>
+        <Box sx={{ flexShrink: 0, mt: 1 }}>
+          <Button
+                  variant="contained"
+                  color="info"
+                  startIcon={<PrintIcon />}
+                  onClick={handleImprimirPedidosDia}
+                >
+                  Imprimir Pedidos del Día
+          </Button>
+        </Box>
 
         {/* Modal de búsqueda de cliente */}
         <SearchClienteModal

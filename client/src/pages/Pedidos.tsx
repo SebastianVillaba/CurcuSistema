@@ -527,6 +527,24 @@ const Pedidos: React.FC = () => {
     setTimeout(() => deliverySelectRef.current?.focus(), 100);
   };
 
+  const handleAnularPedido = async () => {
+    if (!pedidoSeleccionado || !pedidoSeleccionado.idPedido) {
+      alert('Debe seleccionar un pedido para anular');
+      return;
+    }
+    if (!window.confirm(`¿Desea anular el pedido Nro ${pedidoSeleccionado.Nro}?`)) return;
+    try {
+      await pedidoService.anularPedido(pedidoSeleccionado.idPedido);
+      alert('Pedido anulado correctamente');
+      setPedidoSeleccionado(null);
+      handleNuevo();
+      handleBuscarPedidos();
+    } catch (error) {
+      console.error(error);
+      alert('No se pudo anular el pedido');
+    }
+  };
+
   return (
     <RequirePermission permission="ACCESO_COMPRAS">
       <Box sx={{ height: 'calc(100vh - 10px)', p: 2, display: 'flex', flexDirection: 'column' }}>
@@ -1047,15 +1065,28 @@ const Pedidos: React.FC = () => {
             </Paper>
           </Grid>
         </Grid>
-        <Box sx={{ flexShrink: 0, mt: 1 }}>
-          <Button
-                  variant="contained"
-                  color="info"
-                  startIcon={<PrintIcon />}
-                  onClick={handleImprimirPedidosDia}
-                >
-                  Imprimir Pedidos del Día
-          </Button>
+        <Box sx={{ flexShrink: 0, mt: 1, justifyContent: 'space-between', display: 'flex' }}>
+          <Stack direction="row" spacing={1}>
+            <Button
+                    variant="contained"
+                    color="info"
+                    startIcon={<PrintIcon />}
+                    onClick={handleImprimirPedidosDia}
+                  >
+                    Imprimir Pedidos del Día
+            </Button>
+          </Stack>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={handleAnularPedido}
+              disabled={!pedidoSeleccionado}
+            >
+                    Anular Pedido
+            </Button>
+          </Stack>
         </Box>
 
         {/* Modal de búsqueda de cliente */}

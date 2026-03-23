@@ -197,8 +197,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         // Seleccionar automáticamente el cliente encontrado
         const clienteData: ClienteData = {
           idPersona: cliente.idCliente,
-          ruc: cliente.ruc || ruc,
-          dv: cliente.dv?.toString() || dv,
+          ruc: cliente.ruc || ruc || '',
+          dv: cliente.dv?.toString() || dv || '',
           nombre: cliente.nombre || '',
           apellido: cliente.apellido || '',
           direccion: cliente.direccion || '',
@@ -229,18 +229,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
 
   const handleGuardar = async () => {
     // Validaciones
-    if (!ruc.trim()) {
-      setError('El RUC es obligatorio');
-      return;
-    }
-
     if (!nombre.trim()) {
       setError('El nombre es obligatorio');
-      return;
-    }
-
-    if (!apellido.trim()) {
-      setError('El apellido es obligatorio');
       return;
     }
 
@@ -253,10 +243,10 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     if (clienteEncontrado && idPersona) {
       const clienteData: ClienteData = {
         idPersona,
-        ruc,
-        dv,
+        'ruc': ruc || '',
+        'dv': dv || '',
         nombre,
-        apellido,
+        'apellido': apellido || '',
         direccion,
         idDepartamento,
         idDistrito,
@@ -287,7 +277,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         celular: celular || undefined,
         email: email || undefined,
         idCiudad: parseInt(idCiudad),
-        idUsuarioAlta: idUsuario
+        idUsuarioAlta: idUsuario,
+        idTipoDocumento: tipoDocumento
       });
 
       // Seleccionar el cliente recién creado

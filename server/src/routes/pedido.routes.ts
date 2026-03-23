@@ -5,7 +5,7 @@ import {
     facturarPedidosPendientesCliente, pedidoClienteFacturacion, pedidosClienteMasivoAFacturacion,
     agregarDetPedidoFacturacionTmp, eliminarDetPedidoFacturacionTmp,
     consultaPedidoFecha, consultaPedidoFiltro,
-    limpiarDetPedidoTmp
+    limpiarDetPedidoTmp, anularPedido
 } from '../controllers/pedido.controller';
 //import { authMiddleware } from '../Middlewares/auth.middleware';
 
@@ -31,6 +31,7 @@ router.get('/buscar/fecha', consultaPedidoFecha);
 router.get('/buscar/filtro', consultaPedidoFiltro);
 
 router.get('/:idPedido', obtenerDatosPedido);
+router.put('/anular/:idPedido', anularPedido);
 
 export default router;
 

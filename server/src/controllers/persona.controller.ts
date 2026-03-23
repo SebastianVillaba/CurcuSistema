@@ -356,14 +356,15 @@ export const agregarClienteRapido = async (req: Request, res: Response): Promise
       celular,
       email,
       idCiudad,
-      idUsuarioAlta
+      idUsuarioAlta,
+      idTipoDocumento
     } = req.body;
 
     // Validar parámetros obligatorios
-    if (!ruc || !nombre || !apellido || !idCiudad || !idUsuarioAlta) {
+    if (!nombre || !idCiudad || !idUsuarioAlta || !idTipoDocumento) {
       res.status(400).json({
         success: false,
-        message: 'Faltan parámetros obligatorios: ruc, nombre, apellido, idCiudad, idUsuarioAlta'
+        message: 'Faltan parámetros obligatorios: nombre, idCiudad, idUsuarioAlta, idTipoDocumento'
       });
       return;
     }
@@ -372,16 +373,17 @@ export const agregarClienteRapido = async (req: Request, res: Response): Promise
       query: 'sp_agregarClienteRapido',
       isStoredProcedure: true,
       inputs: [
-        { name: 'ruc', type: sql.VarChar(10), value: ruc },
+        { name: 'ruc', type: sql.VarChar(10), value: ruc || ''},
         { name: 'dv', type: sql.VarChar(1), value: dv || '' },
         { name: 'nombre', type: sql.VarChar(40), value: nombre },
-        { name: 'apellido', type: sql.VarChar(40), value: apellido },
+        { name: 'apellido', type: sql.VarChar(40), value: apellido || '' },
         { name: 'direccion', type: sql.VarChar(100), value: direccion || null },
         { name: 'fechaNacimiento', type: sql.Date, value: fechaNacimiento || null },
         { name: 'celular', type: sql.VarChar(20), value: celular || null },
         { name: 'email', type: sql.VarChar(50), value: email || null },
         { name: 'idCiudad', type: sql.Int, value: idCiudad },
-        { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta }
+        { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta },
+        { name: 'idTipoDocumento', type: sql.Int, value: idTipoDocumento }
       ]
     });
 

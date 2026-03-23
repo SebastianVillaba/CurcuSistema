@@ -210,5 +210,23 @@ export const personaService = {
       console.error('Error al consultar cliente:', error);
       throw new Error(error.response?.data?.message || 'Error al consultar cliente');
     }
+  },
+
+  /**
+   * Agrega un cliente usando la vía rápida
+   * @param data - Datos para la creación rápida del cliente
+   * @returns Datos del cliente creado
+   */
+  agregarClienteRapido: async (data: any): Promise<any> => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/persona/agregarClienteRapido`,
+        data
+      );
+      return response.data.result;
+    } catch (error: any) {
+      console.error('Error al agregar cliente rápidamente:', error);
+      throw new Error(error.response?.data?.message || 'Error al agregar cliente');
+    }
   }
 };

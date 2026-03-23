@@ -133,6 +133,7 @@ export const pedidoService = {
             throw new Error(error.response?.data?.message || 'Error al consultar los pedidos del día');
         }
     },
+
     consultaTipoCobro: async (): Promise<TipoCobro[]> => {
         try {
             const response = await axios.get(`${API_BASE_URL}/pedido/tipoCobro`);
@@ -152,6 +153,28 @@ export const pedidoService = {
         } catch (error: any) {
             console.error('Error al obtener datos del pedido:', error);
             throw new Error(error.response?.data?.message || 'Error al obtener datos del pedido');
+        }
+    },
+
+    limpiarDetPedidoTmp: async (idTerminalWeb: number): Promise<any> => {
+        try {
+            const response = await axios.delete(`${API_BASE_URL}/pedido/detalleTmp`, {
+                params: { idTerminalWeb }
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Error al limpiar detalles del pedido:', error);
+            throw new Error(error.response?.data?.message || 'Error al limpiar detalles del pedido');
+        }
+    },
+
+    anularPedido: async (idPedido: number): Promise<any> => {
+        try {
+            const response = await axios.put(`${API_BASE_URL}/pedido/anular/${idPedido}`);
+            return response.data;
+        } catch (error: any) {
+            console.error('Error al anular el pedido:', error);
+            throw new Error(error.response?.data?.message || 'Error al anular el pedido');
         }
     },
 
@@ -244,16 +267,4 @@ export const pedidoService = {
             throw new Error(error.response?.data?.message || 'Error al consultar pedidos con filtro');
         }
     },
-
-    limpiarDetPedidoTmp: async (idTerminalWeb: number): Promise<any> => {
-        try {
-            const response = await axios.delete(`${API_BASE_URL}/pedido/detalleTmp`, {
-                params: { idTerminalWeb }
-            });
-            return response.data;
-        } catch (error: any) {
-            console.error('Error al limpiar detalles del pedido:', error);
-            throw new Error(error.response?.data?.message || 'Error al limpiar detalles del pedido');
-        }
-    }
 };

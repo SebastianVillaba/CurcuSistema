@@ -334,3 +334,21 @@ export const limpiarDetPedidoTmp = async (req: Request, res: Response) => {
         }
     }
 }
+
+export const anularPedido = async (req: Request, res: Response) => {
+    try {
+        const { idPedido } = req.params;
+        await executeRequest({
+            query: `update pedido set activo=0 where idPedido=${idPedido}`,
+            isStoredProcedure: false
+        });
+        res.status(200).json({ message: 'Pedido anulado correctamente.' });
+    } catch (error) {
+        console.error('Error al anular el pedido:', error);
+        if (error instanceof Error) {
+            res.status(500).json({ message: 'Error al anular el pedido', error: error.message });
+        } else {
+            res.status(500).json({ message: 'Error al anular el pedido', error: 'Un error desconocido ha ocurrido.' });
+        }
+    }
+}

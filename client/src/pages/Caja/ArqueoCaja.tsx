@@ -46,11 +46,16 @@ const ArqueoCaja: React.FC = () => {
     // Verificar estado de caja al cargar
     useEffect(() => {
         if (idTerminalWeb && nroCaja && estadoCaja) {
-            setIdMovimientoCaja(nroCaja);
+            const storedIdMovimiento = localStorage.getItem('idMovimientoCaja');
+            if (storedIdMovimiento) {
+                setIdMovimientoCaja(parseInt(storedIdMovimiento, 10));
+            } else {
+                setIdMovimientoCaja(nroCaja);
+            }
             setCajaAbierta(true);
             setNroCajaEstado(nroCaja);
         }
-    }, []);
+    }, [idTerminalWeb, nroCaja, estadoCaja]);
 
     const handleIniciarCaja = async () => {
         if (!idTerminalWeb) {

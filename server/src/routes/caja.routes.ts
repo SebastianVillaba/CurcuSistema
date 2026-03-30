@@ -4,7 +4,6 @@ import {
   abrirCaja, 
   cerrarCaja, 
   agregarGastoCaja,
-  consultarMovimientosPorCaja, 
   agregarArqueoCajaTmp,
   listarArqueoCajaTmp,
   eliminarArqueoCajaTmp,
@@ -28,9 +27,6 @@ router.post('/gasto', agregarGastoCaja);
 
 // Ruta para listar los gastos de la caja
 router.get('/gasto', listarGastoCajaTmp);
-
-// Ruta para consultar los movimientos de una caja específica
-router.get('/movimientos', consultarMovimientosPorCaja);
 
 // Ruta para agregar los detalles al arqueo de caja
 router.post('/agregarArqueoCajaTmp', agregarArqueoCajaTmp);

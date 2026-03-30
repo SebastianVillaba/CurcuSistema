@@ -18,6 +18,10 @@ import {
   IconButton,
   Tooltip,
   Alert,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PrintIcon from '@mui/icons-material/Print';
@@ -70,6 +74,7 @@ const ConsultaVentas: React.FC = () => {
     new Date().toISOString().split('T')[0]
   );
   const [nroFactura, setNroFactura] = useState('');
+  const [tipoBusqueda, setTipoBusqueda] = useState<'fecha' | 'factura'>('fecha');
 
   // ── Resultados ─────────────────────────────
   const [ventas, setVentas] = useState<VentaCabecera[]>([]);
@@ -90,7 +95,10 @@ const ConsultaVentas: React.FC = () => {
 
     try {
       let result;
-      if (nroFactura.trim() !== '') {
+      if (tipoBusqueda === 'factura') {
+        if (nroFactura.trim() === '') {
+          throw new Error('Ingrese un número de factura válido.');
+        }
         const parts = nroFactura.split('-');
         let dsuc = 1, dcaja = 1, dfactu = parseInt(nroFactura, 10);
         if (parts.length === 3) {
@@ -142,6 +150,23 @@ const ConsultaVentas: React.FC = () => {
 
     try {
       const resp = await consultaVentaService.consultaInformacionVenta(venta.idVenta);
+      
+      // Extraemos la cabecera devuelta por el SP para actualizar los datos si es necesario
+      if (resp.cabecera) {
+        setSelectedVenta({
+          idVenta: venta.idVenta,
+          nroFactura: resp.cabecera.factura,
+          fechaHora: new Date(resp.cabecera.fechaAlta).toLocaleString('es-PY'),
+          cliente: resp.cabecera.nombreCliente,
+          ruc: resp.cabecera.ruc,
+          usuario: resp.cabecera.usuario,
+          sucursal: resp.cabecera.nombreSucursal || '',
+          total: resp.cabecera.totalVenta,
+          estado: resp.cabecera.estado,
+          tipoVenta: resp.cabecera.nombreTipo,
+          tipoPago: '' // Puedes adaptarlo si el SP lo devuelve en el futuro
+        });
+      }
       
       const mappedDetalles = resp.detalle.map((d: any) => ({
         nro: d.Nro,
@@ -199,45 +224,70 @@ const ConsultaVentas: React.FC = () => {
       {/* ── Panel de filtros (Stack horizontal) ── */}
       <Paper sx={{ p: 2 }}>
         {sectionLabel('Filtros de búsqueda')}
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="flex-start" flexWrap="wrap" useFlexGap>
-          <TextField
-            label="Fecha desde"
-            type="date"
-            size="small"
-            value={fechaDesde}
-            onChange={(e) => setFechaDesde(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            onKeyDown={handleKeyDown}
-            sx={{ minWidth: 155 }}
-          />
-          <TextField
-            label="Fecha hasta"
-            type="date"
-            size="small"
-            value={fechaHasta}
-            onChange={(e) => setFechaHasta(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            onKeyDown={handleKeyDown}
-            sx={{ minWidth: 155 }}
-          />
-          <TextField
-            label="Nro. Factura"
-            size="small"
-            value={nroFactura}
-            onChange={(e) => setNroFactura(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="001-001-0000001"
-            sx={{ minWidth: 200, flex: 1 }}
-          />
-          <Button
-            variant="contained"
-            startIcon={<SearchIcon />}
-            onClick={handleBuscar}
-            disabled={isLoading}
-            sx={{ height: 40, alignSelf: 'flex-start' }}
-          >
-            Buscar
-          </Button>
+        <Stack direction="column" spacing={2} alignItems="flex-start">
+          <FormControl component="fieldset">
+            <RadioGroup
+              row
+              value={tipoBusqueda}
+              onChange={(e) => {
+                setTipoBusqueda(e.target.value as 'fecha' | 'factura');
+                setError('');
+                setVentas([]);
+                setSelectedVenta(null);
+                setDetalles([]);
+              }}
+            >
+              <FormControlLabel value="fecha" control={<Radio size="small" />} label="Por Fecha" />
+              <FormControlLabel value="factura" control={<Radio size="small" />} label="Por Nro. Factura" />
+            </RadioGroup>
+          </FormControl>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="flex-start" flexWrap="wrap" useFlexGap sx={{ width: '100%' }}>
+            {tipoBusqueda === 'fecha' ? (
+              <>
+                <TextField
+                  label="Fecha desde"
+                  type="date"
+                  size="small"
+                  value={fechaDesde}
+                  onChange={(e) => setFechaDesde(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  onKeyDown={handleKeyDown}
+                  sx={{ minWidth: 155 }}
+                />
+                <TextField
+                  label="Fecha hasta"
+                  type="date"
+                  size="small"
+                  value={fechaHasta}
+                  onChange={(e) => setFechaHasta(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  onKeyDown={handleKeyDown}
+                  sx={{ minWidth: 155 }}
+                />
+              </>
+            ) : (
+              <TextField
+                label="Nro. Factura"
+                size="small"
+                value={nroFactura}
+                onChange={(e) => setNroFactura(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="001-001-0000001"
+                sx={{ minWidth: 200, flex: 1, maxWidth: 300 }}
+                autoFocus
+              />
+            )}
+            <Button
+              variant="contained"
+              startIcon={<SearchIcon />}
+              onClick={handleBuscar}
+              disabled={isLoading}
+              sx={{ height: 40, alignSelf: 'flex-start' }}
+            >
+              Buscar
+            </Button>
+          </Stack>
         </Stack>
       </Paper>
 
@@ -257,6 +307,7 @@ const ConsultaVentas: React.FC = () => {
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>ID</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Nro. Factura</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Fecha / Hora</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Cliente</TableCell>
@@ -280,6 +331,7 @@ const ConsultaVentas: React.FC = () => {
                     '&.Mui-selected': { backgroundColor: 'action.selected' }
                   }}
                 >
+                  <TableCell>{venta.idVenta}</TableCell>
                   <TableCell>{venta.nroFactura}</TableCell>
                   <TableCell>{venta.fechaHora}</TableCell>
                   <TableCell>{venta.cliente}</TableCell>
@@ -294,7 +346,7 @@ const ConsultaVentas: React.FC = () => {
               ))}
               {ventas.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
                     <Typography color="text.disabled">
                       {isLoading ? 'Buscando...' : 'Realice una búsqueda para ver los resultados'}
                     </Typography>
@@ -364,7 +416,7 @@ const ConsultaVentas: React.FC = () => {
                   {detalles.map((d) => (
                     <TableRow key={d.nro}>
                       <TableCell>{d.nro}</TableCell>
-                      <TableCell>{d.codigo}</TableCell>
+                      <TableCell>{typeof d.codigo === 'string' ? d.codigo : (d as any).idProducto}</TableCell>
                       <TableCell>{d.descripcion}</TableCell>
                       <TableCell align="right">{d.cantidad}</TableCell>
                       <TableCell align="right">{formatMoneda(d.precio)}</TableCell>

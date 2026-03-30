@@ -292,45 +292,6 @@ export const eliminarGastoCajaTmp = async (req: Request, res: Response): Promise
 }
 
 /**
- * Controller para consultar los movimientos de una caja específica - YA NO ESTÁ EN USO
- */
-export const consultarMovimientosPorCaja = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { idCaja } = req.query as any;
-
-    if (!idCaja) {
-      res.status(400).json({
-        success: false,
-        message: "El parámetro 'idCaja' es obligatorio"
-      });
-      return;
-    }
-
-    const inputs = [
-      { name: 'idCaja', type: sql.Int, value: parseInt(idCaja) }
-    ];
-
-    const result = await executeRequest({
-      query: 'sp_consultaMovimientoCajaPorCaja',
-      inputs: inputs as any,
-      isStoredProcedure: true
-    });
-
-    res.status(200).json({
-      success: true,
-      result: result.recordset
-    });
-
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: "Error al consultar los movimientos de la caja",
-      error: error.message
-    });
-  }
-};
-
-/**
  * Controller para agregar un detalle al arqueo de caja 
  */
 export const agregarArqueoCajaTmp = async (req: Request, res: Response): Promise<void> => {

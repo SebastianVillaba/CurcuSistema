@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { executeRequest, sql } from '../utils/dbHandler';
+import { generateVentasProductoPdf } from '../utils/pdfGenerator';
+
 
 /**
  * Controller para obtener el reporte de factura de venta
@@ -242,6 +244,108 @@ export const reporteTicketRemision = async (req: Request, res: Response): Promis
     res.status(500).json({
       success: false,
       message: 'Error al generar reporte de ticket de remisión',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};
+
+/**
+ * Controller para obtener el reporte de pedido delivery
+ * @param req - Request con el parámetro idDelivery y fecha
+ * @param res - Response con los datos del reporte
+ */
+export const reportePedidoDelivery = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idDelivery, fecha } = req.query;
+
+    if (!idDelivery || !fecha) {
+      res.status(400).json({
+        success: false,
+        message: 'Los parámetros idDelivery y fecha son requeridos'
+      });
+      return;
+    }
+
+    const result = await executeRequest({
+      query: 'sp_reportePedidoDelivery',
+      isStoredProcedure: true,
+      inputs: [
+        {
+          name: 'idDelivery',
+          type: sql.Int,
+          value: parseInt(idDelivery as string)
+        },
+        {
+          name: 'fecha',
+          type: sql.Date,
+          value: new Date(fecha as string)
+        }
+      ]
+    });
+
+    const recordsets = (result as typeof result & { recordsets?: any[] }).recordsets;
+
+    res.status(200).json({
+      success: true,
+      message: 'Reporte de pedido por delivery generado exitosamente',
+      data: recordsets?.[0] ?? []
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de pedido por delivery:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al generar reporte de pedido por delivery',
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
+};
+
+/**
+ * Controller para obtener el reporte de venta de producto por día
+ * @param req - Request con el parámetro fecha y opcionalmente format (ej. format=pdf)
+ * @param res - Response con los datos del reporte o el archivo PDF
+ */
+export const reporteVentaProductoDia = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fecha, format } = req.query;
+
+    if (!fecha) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro fecha es requerido'
+      });
+      return;
+    }
+
+    const result = await executeRequest({
+      query: 'sp_reporteVentaProductoDia',
+      isStoredProcedure: true,
+      inputs: [
+        {
+          name: 'fecha',
+          type: sql.Date,
+          value: new Date(fecha as string)
+        }
+      ]
+    });
+
+    const recordsets = (result as typeof result & { recordsets?: any[] }).recordsets;
+    const data = recordsets?.[0] ?? [];
+
+    if (format === 'pdf') {
+      return generateVentasProductoPdf(res, data, fecha as string);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Reporte de venta de producto por día generado exitosamente',
+      data: data
+    });
+  } catch (error) {
+    console.error('Error al generar reporte de venta de producto por día:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al generar reporte de venta de producto por día',
       error: error instanceof Error ? error.message : 'Error desconocido'
     });
   }

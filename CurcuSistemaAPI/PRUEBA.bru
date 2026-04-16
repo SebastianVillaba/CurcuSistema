@@ -5,28 +5,15 @@ meta {
 }
 
 post {
-  url: http://localhost:5000/api/ventas
+  url: https://api-whatsapp.elpedalbogado.com/enviar-turno
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "cliente": {
-      "nombreApellido": "Sebastian Villalba",
-      "cedula": "5372998",
-      "dv": 9,
-      "direccion": "JORGE MEMMEL",
-      "telefono": "+595983475319",
-      "correo": "sebastianvillalba5432@gmail.com"
-    },
-    "productos": [
-      {
-        "codigo": 100265,
-        "cantidad": 2,
-        "precio": 24500.00
-      }
-    ]
+    "numero": "+595983475319",
+    "mensaje": "Hola, esto es un mensaje de prueba desde el API de whatsapp"
   }
 }
 

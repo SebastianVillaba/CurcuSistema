@@ -246,7 +246,11 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     {
       label: 'Reportes',
       items: [
-        // Los módulos de reportes serán añadidos aquí próximamente
+        {
+          text: 'Panel de Reportes',
+          path: '/reportes',
+          icon: <ReceiptIcon />,
+        },
       ],
     },
     // ──────────────── ADMINISTRACIÓN ────────────────

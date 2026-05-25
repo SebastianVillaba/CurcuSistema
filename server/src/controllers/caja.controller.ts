@@ -218,8 +218,9 @@ export const listarGastoCajaTmp = async (req: Request, res: Response): Promise<v
       isStoredProcedure: true
     });
 
-    const detalle = result.recordsets[0];
-    const totalGasto = result.recordsets[1];
+    const recordsets = result.recordsets as any[];
+    const detalle = recordsets[0];
+    const totalGasto = recordsets[1];
 
     res.status(201).json({
       success: true,

@@ -29,6 +29,7 @@ export const generateVentasProductoPdf = (res: Response, data: any[], fecha: str
   // Agregar la fila de totales
   mappedData.push({
     nombre: 'TOTAL GENERAL',
+    TotalVendido: '',
     totalMontoVendido: totalMonto.toLocaleString('es-PY', formatOptions)
   });
 

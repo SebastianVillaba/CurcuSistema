@@ -36,6 +36,7 @@ interface ClienteData {
   celular?: string;
   email?: string;
   fechaNacimiento?: string;
+  porcentajeDescuento?: number;
 }
 
 interface ClienteFormProps {
@@ -67,6 +68,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [porcentajeDescuento, setPorcentajeDescuento] = useState<number>(0);
 
   // TODO: Obtener idUsuario del contexto de autenticación
   const idUsuario = 1; // Temporal
@@ -174,6 +176,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         // Guardar el idCliente
         setIdPersona(cliente.idCliente);
         setClienteEncontrado(true);
+        setPorcentajeDescuento(cliente.porcentajeDescuento || 0);
 
         // Llenar los campos con la información encontrada
         setNombre(cliente.nombre || '');
@@ -208,7 +211,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
           telefono: cliente.telefono,
           celular: cliente.celular,
           email: cliente.email,
-          fechaNacimiento: cliente.fechaNacimiento
+          fechaNacimiento: cliente.fechaNacimiento,
+          porcentajeDescuento: cliente.porcentajeDescuento || 0,
         };
 
         onClienteSelected(clienteData);
@@ -255,6 +259,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         celular,
         email,
         fechaNacimiento,
+        porcentajeDescuento: porcentajeDescuento || 0,
       };
 
       onClienteSelected(clienteData);
@@ -296,6 +301,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         celular,
         email,
         fechaNacimiento,
+        porcentajeDescuento: nuevoCliente.porcentajeDescuento || 0,
       };
 
       onClienteSelected(clienteData);
@@ -323,6 +329,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     setEmail('');
     setFechaNacimiento('');
     setError('');
+    setPorcentajeDescuento(0);
     onClose();
   };
 

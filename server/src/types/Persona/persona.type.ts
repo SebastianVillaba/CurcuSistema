@@ -21,8 +21,8 @@ export interface InsertarPersonaRequest {
   timbrado?: string;
   tipoPersonaFis: boolean;
   tipoPersonaCli: boolean;
-  tipoFuncionario: boolean;
-  idSector: number | null;
+  tipoPersonal?: boolean;
+  tipoDelivery?: boolean;
 }
 
 export interface InsertarPersonaResponse {
@@ -92,5 +92,12 @@ export interface ModificarPersonaRequest {
   apellido?: string;
   responsableProveedor?: string;
   timbrado?: string;
-  idSector?: number;
+  tipoPersonal?: boolean;
+  tipoPersonaJur?: boolean;
+  tipoProveedor?: boolean;
+  tipoPersonaFis?: boolean;
+  tipoPersonaCli?: boolean;
+  codigo?: number;
+  idGrupoCliente?: number;
+  tipoDelivery?: boolean;
 }

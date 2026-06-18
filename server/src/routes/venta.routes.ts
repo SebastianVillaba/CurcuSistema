@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { agregarDetalleVenta, consultarDetalleVenta, eliminarDetalleVenta, guardarVenta, consultaFacturaCorrelativa } from '../controllers/venta.controller';
+import { agregarDetalleVenta, consultarDetalleVenta, eliminarDetalleVenta, guardarVenta, consultaFacturaCorrelativa, actualizarDescuentoCliente } from '../controllers/venta.controller';
 // import { verifyToken } from '../Middlewares/auth.middleware'; // Deshabilitado temporalmente
 
 const router = Router();
@@ -26,5 +26,8 @@ router.post('/guardar', guardarVenta);
 // TODO: Agregar autenticación cuando el sistema de login esté implementado
 router.get('/facturaActual', consultaFacturaCorrelativa);
 
+// Ruta para actualizar el descuento de los items según el cliente
+router.put('/actualizarDescuento', actualizarDescuentoCliente);
 
 export default router;
+

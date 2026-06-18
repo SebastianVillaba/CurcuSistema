@@ -109,5 +109,21 @@ export const ventaService = {
       console.error('Error al consultar factura actual:', error);
       throw new Error(error.response?.data?.message || 'Error al consultar factura actual');
     }
+  },
+
+  /**
+   * Actualiza los descuentos de los items según el cliente en el detalle temporal
+   */
+  actualizarDescuentoCliente: async (idTerminalWeb: number, idCliente: number | null): Promise<any> => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/venta/actualizarDescuento`, {
+        idTerminalWeb,
+        idCliente
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error al actualizar descuento del cliente:', error);
+      throw new Error(error.response?.data?.message || 'Error al actualizar descuento del cliente');
+    }
   }
 };

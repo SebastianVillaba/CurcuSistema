@@ -1,4 +1,4 @@
-import type { ItemFactura, DatosFactura, ItemTicket, DatosTicket, DatosTicketPedido, DatosCierreCaja, ItemTicketRemision, DatosTicketRemision, DatosTicketPedidosDia } from "../types/ticket.types";
+import type { ItemFactura, DatosFactura, ItemTicket, DatosTicket, DatosTicketPedido, DatosCierreCaja, ItemTicketRemision, DatosTicketRemision, DatosTicketPedidosDia, DatosTicketPreventa } from "../types/ticket.types";
 import jsPDF from "jspdf";
 
 
@@ -7,6 +7,40 @@ class TicketService {
     private readonly ANCHO_TICKET = 73.6; // Ancho del ticket para impresoras de 80mm
     private readonly MARGEN_IZQ = 2;
     private posY = 10; // Posición Y inicial
+
+    private imprimirEnIframeOculto(doc: jsPDF): void {
+        const blobUrl = doc.output('bloburl');
+        const iframe = document.createElement('iframe');
+
+        // Estilo para ocultar el iframe del usuario pero mantenerlo visible para la impresión
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+
+        iframe.src = blobUrl;
+
+        iframe.onload = () => {
+            try {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+            } catch (error) {
+                console.error("Error al intentar imprimir desde el iframe oculto:", error);
+            }
+
+            // Remover el iframe y revocar el blob URL después de un pequeño setTimeout de seguridad
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+                URL.revokeObjectURL(blobUrl);
+            }, 5000);
+        };
+
+        document.body.appendChild(iframe);
+    }
 
     /**
      * Generar el ticket e imprime automaticamente
@@ -45,9 +79,44 @@ class TicketService {
         // Pie de página
         this.dibujarLinea(doc);
 
-        // Abrir el PDF en una nueva ventana para imprimir
+        // Imprimir en segundo plano usando un iframe oculto
         doc.autoPrint();
-        window.open(doc.output('bloburl'), '_blank');
+        this.imprimirEnIframeOculto(doc);
+    }
+
+    public async generarTicketPreventa(datos: DatosTicketPreventa): Promise<void> {
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: [this.ANCHO_TICKET, 306.3]
+        });
+
+        this.posY = 10;
+
+        // Dibujar el encabezado
+        this.dibujarEncabezado(doc, datos as any);
+
+        // Dibujar información del cliente adaptada para PREVENTA
+        this.dibujarInfoClientePreventa(doc, datos);
+
+        // Dibujar encabezado de tabla de items
+        this.dibujarEncabezadoTabla(doc);
+
+        // Dibujar items
+        this.dibujarItems(doc, datos.items);
+
+        // Dibujar totales
+        this.dibujarTotales(doc, datos as any);
+
+        // Dibujar footer preventa
+        this.dibujarFooterPreventa(doc, datos);
+
+        // Pie de página
+        this.dibujarLinea(doc);
+
+        // Imprimir en segundo plano usando un iframe oculto
+        doc.autoPrint();
+        this.imprimirEnIframeOculto(doc);
     }
 
     public async generarTicketPedido(datos: DatosTicketPedido): Promise<void> {
@@ -67,25 +136,31 @@ class TicketService {
         this.dibujarTotalesPedido(doc, datos);
 
         doc.autoPrint();
-        window.open(doc.output('bloburl'), '_blank');
+        this.imprimirEnIframeOculto(doc);
     }
 
     public async generarTicketCierreCaja(datos: DatosCierreCaja): Promise<void> {
-        const doc = new jsPDF({
+        const alturaTicket = this.calcularAlturaCierreCaja(datos);
+        const jsPDFClass = (await import("jspdf")).default;
+        const doc = new jsPDFClass({
             orientation: 'portrait',
             unit: 'mm',
-            format: [this.ANCHO_TICKET, 306.3]
+            format: [this.ANCHO_TICKET, alturaTicket]
         });
 
         this.posY = 10;
 
         this.dibujarEncabezadoCierreCaja(doc, datos);
         this.dibujarResumenCierreCaja(doc, datos);
+        this.dibujarArqueoMoneda(doc, datos);
+        this.dibujarTarjetasDebito(doc, datos);
+        this.dibujarTarjetasCredito(doc, datos);
+        this.dibujarTransferencias(doc, datos);
         this.dibujarGastosCierreCaja(doc, datos);
         this.dibujarFooterCierreCaja(doc);
 
         doc.autoPrint();
-        window.open(doc.output('bloburl'), '_blank');
+        this.imprimirEnIframeOculto(doc);
     }
 
     public async generarTicketRemision(datos: DatosTicketRemision): Promise<void> {
@@ -104,7 +179,7 @@ class TicketService {
         this.dibujarFooterRemision(doc);
 
         doc.autoPrint();
-        window.open(doc.output('bloburl'), '_blank');
+        this.imprimirEnIframeOculto(doc);
     }
 
     public async generarTicketPedidosDia(datos: DatosTicketPedidosDia): Promise<void> {
@@ -172,7 +247,7 @@ class TicketService {
         doc.text('*** FIN DEL REPORTE ***', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
         
         doc.autoPrint();
-        window.open(doc.output('bloburl'), '_blank');
+        this.imprimirEnIframeOculto(doc);
     }
 
     /**
@@ -358,6 +433,19 @@ class TicketService {
         this.dibujarFilaResumen(doc, 'Total Cobranza:', datos.resumen.totalCobranza);
         this.dibujarFilaResumen(doc, 'Total Gastos:', datos.resumen.totalGastos);
 
+        if (datos.resumen.totalMoneda !== undefined && datos.resumen.totalMoneda !== null) {
+            this.dibujarFilaResumen(doc, 'Total Efectivo (Arqueo):', datos.resumen.totalMoneda);
+        }
+        if (datos.resumen.totalTarjetaDebito !== undefined && datos.resumen.totalTarjetaDebito !== null) {
+            this.dibujarFilaResumen(doc, 'Total Tarj. Débito:', datos.resumen.totalTarjetaDebito);
+        }
+        if (datos.resumen.totalTarjetaCredito !== undefined && datos.resumen.totalTarjetaCredito !== null) {
+            this.dibujarFilaResumen(doc, 'Total Tarj. Crédito:', datos.resumen.totalTarjetaCredito);
+        }
+        if (datos.resumen.totalTransferencia !== undefined && datos.resumen.totalTransferencia !== null) {
+            this.dibujarFilaResumen(doc, 'Total Transferencias:', datos.resumen.totalTransferencia);
+        }
+
         this.dibujarLinea(doc);
 
         this.dibujarFilaResumen(doc, 'Saldo Teorico:', datos.resumen.saldoTeorico);
@@ -375,6 +463,100 @@ class TicketService {
         doc.text(etiqueta, this.MARGEN_IZQ, this.posY);
         doc.text(this.formatearNumero(valor || 0), this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
         this.posY += 5;
+    }
+
+    private dibujarArqueoMoneda(doc: jsPDF, datos: DatosCierreCaja): void {
+        if (datos.arqueoMoneda && datos.arqueoMoneda.length > 0) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('DETALLE EFECTIVO (ARQUEO)', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
+            this.posY += 5;
+
+            doc.setFontSize(8);
+            doc.text('Moneda', this.MARGEN_IZQ, this.posY);
+            doc.text('Monto', this.MARGEN_IZQ + 28, this.posY);
+            doc.text('Total Gs.', this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+            this.posY += 4;
+
+            doc.setFont('helvetica', 'normal');
+            datos.arqueoMoneda.forEach(item => {
+                doc.text(this.truncarTexto(item.nombre || 'Moneda', 15), this.MARGEN_IZQ, this.posY);
+                doc.text(this.formatearNumero(item.montoMoneda || 0), this.MARGEN_IZQ + 28, this.posY);
+                doc.text(this.formatearNumero(item.total || 0), this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+                this.posY += 4;
+            });
+
+            this.dibujarLinea(doc);
+        }
+    }
+
+    private dibujarTarjetasDebito(doc: jsPDF, datos: DatosCierreCaja): void {
+        if (datos.tarjetasDebito && datos.tarjetasDebito.length > 0) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('ARQUEO TARJETAS DEBITO', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
+            this.posY += 5;
+
+            doc.setFontSize(8);
+            doc.text('Tarjeta', this.MARGEN_IZQ, this.posY);
+            doc.text('Monto Gs.', this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+            this.posY += 4;
+
+            doc.setFont('helvetica', 'normal');
+            datos.tarjetasDebito.forEach(item => {
+                doc.text(this.truncarTexto(item.nombreTarjetaDebito || 'Tarjeta', 20), this.MARGEN_IZQ, this.posY);
+                doc.text(this.formatearNumero(item.monto || 0), this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+                this.posY += 4;
+            });
+
+            this.dibujarLinea(doc);
+        }
+    }
+
+    private dibujarTarjetasCredito(doc: jsPDF, datos: DatosCierreCaja): void {
+        if (datos.tarjetasCredito && datos.tarjetasCredito.length > 0) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('ARQUEO TARJETAS CREDITO', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
+            this.posY += 5;
+
+            doc.setFontSize(8);
+            doc.text('Tarjeta', this.MARGEN_IZQ, this.posY);
+            doc.text('Monto Gs.', this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+            this.posY += 4;
+
+            doc.setFont('helvetica', 'normal');
+            datos.tarjetasCredito.forEach(item => {
+                doc.text(this.truncarTexto(item.nombreTarjetaDebito || 'Tarjeta', 20), this.MARGEN_IZQ, this.posY);
+                doc.text(this.formatearNumero(item.monto || 0), this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+                this.posY += 4;
+            });
+
+            this.dibujarLinea(doc);
+        }
+    }
+
+    private dibujarTransferencias(doc: jsPDF, datos: DatosCierreCaja): void {
+        if (datos.transferencias && datos.transferencias.length > 0) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('ARQUEO TRANSFERENCIAS', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
+            this.posY += 5;
+
+            doc.setFontSize(8);
+            doc.text('Concepto', this.MARGEN_IZQ, this.posY);
+            doc.text('Monto Gs.', this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+            this.posY += 4;
+
+            doc.setFont('helvetica', 'normal');
+            datos.transferencias.forEach(item => {
+                doc.text(this.truncarTexto(item.concepto || 'Transferencia', 20), this.MARGEN_IZQ, this.posY);
+                doc.text(this.formatearNumero(item.monto || 0), this.ANCHO_TICKET - this.MARGEN_IZQ, this.posY, { align: 'right' });
+                this.posY += 4;
+            });
+
+            this.dibujarLinea(doc);
+        }
     }
 
     private dibujarGastosCierreCaja(doc: jsPDF, datos: DatosCierreCaja): void {
@@ -405,6 +587,85 @@ class TicketService {
         doc.text('*** FIN DEL REPORTE ***', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
         this.posY += 5;
     }
+
+    private calcularAlturaCierreCaja(datos: DatosCierreCaja): number {
+        let altura = 10; // margen superior
+
+        // Encabezado
+        altura += 6; // CIERRE DE CAJA
+        altura += 6; // Nombre de la caja
+        altura += 5; // Separador
+        altura += 5; // Cajero Apertura
+        altura += 5; // Cajero Cierre
+        altura += 5; // Apertura
+        altura += 5; // Cierre
+        altura += 5; // Separador
+
+        // Resumen
+        altura += 5; // Monto Inicial
+        altura += 5; // Total Ventas
+        altura += 5; // Total Cobranza
+        altura += 5; // Total Gastos
+        
+        if (datos.resumen.totalMoneda !== undefined && datos.resumen.totalMoneda !== null) altura += 5;
+        if (datos.resumen.totalTarjetaDebito !== undefined && datos.resumen.totalTarjetaDebito !== null) altura += 5;
+        if (datos.resumen.totalTarjetaCredito !== undefined && datos.resumen.totalTarjetaCredito !== null) altura += 5;
+        if (datos.resumen.totalTransferencia !== undefined && datos.resumen.totalTransferencia !== null) altura += 5;
+
+        altura += 5; // Separador
+        altura += 5; // Saldo Teórico
+        altura += 5; // Saldo Real
+        altura += 5; // Diferencia
+        altura += 5; // Estado Cierre
+        altura += 5; // Separador
+
+        // Arqueo Moneda
+        if (datos.arqueoMoneda && datos.arqueoMoneda.length > 0) {
+            altura += 5; // Título
+            altura += 4; // Header tabla
+            altura += datos.arqueoMoneda.length * 4;
+            altura += 5; // Separador
+        }
+
+        // Tarjetas Débito
+        if (datos.tarjetasDebito && datos.tarjetasDebito.length > 0) {
+            altura += 5; // Título
+            altura += 4; // Header tabla
+            altura += datos.tarjetasDebito.length * 4;
+            altura += 5; // Separador
+        }
+
+        // Tarjetas Crédito
+        if (datos.tarjetasCredito && datos.tarjetasCredito.length > 0) {
+            altura += 5; // Título
+            altura += 4; // Header tabla
+            altura += datos.tarjetasCredito.length * 4;
+            altura += 5; // Separador
+        }
+
+        // Transferencias
+        if (datos.transferencias && datos.transferencias.length > 0) {
+            altura += 5; // Título
+            altura += 4; // Header tabla
+            altura += datos.transferencias.length * 4;
+            altura += 5; // Separador
+        }
+
+        // Gastos
+        if (datos.gastos && datos.gastos.length > 0) {
+            altura += 5; // Título
+            altura += 4; // Header tabla
+            altura += datos.gastos.length * 4;
+            altura += 5; // Separador
+        }
+
+        // Footer
+        altura += 5; // FIN REPORTE
+        altura += 10; // margen inferior
+
+        return Math.max(altura, 100);
+    }
+
 
     /**
      * 
@@ -677,6 +938,57 @@ class TicketService {
         this.posY += 6;
     }
 
+    private dibujarInfoClientePreventa(doc: jsPDF, datos: DatosTicketPreventa): void {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+
+        // Fecha/Hora
+        const fechaFormateada = this.formatearFecha(datos.fechaHora);
+        doc.text(`Fecha/Hora: ${fechaFormateada}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 5;
+
+        // IDPREVENTA
+        doc.setFont("helvetica", "bold");
+        doc.text(`NRO PREVENTA: ${datos.idPreventa}`, this.MARGEN_IZQ, this.posY);
+        doc.setFont("helvetica", "normal");
+        this.posY += 5;
+
+        // Cliente
+        const lineasCliente = this.dividirTexto(datos.cliente, 50);
+        for (let linea = 0; linea < lineasCliente.length; linea++) {
+            if (linea === 0) {
+                doc.text(`Cliente: ${lineasCliente[linea]}`, this.MARGEN_IZQ, this.posY);
+                this.posY += 5;
+            }
+            else {
+                doc.text(lineasCliente[linea], this.MARGEN_IZQ, this.posY);
+                this.posY += 5;
+            }
+        }
+
+        // CI/RUC Cliente
+        doc.text(`CI/RUC: ${datos.rucCliente}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 5;
+
+        // Vendedor
+        doc.text(`Cajero/a: ${datos.vendedor}`, this.MARGEN_IZQ, this.posY);
+        this.posY += 6;
+
+        this.dibujarLinea(doc);
+    }
+
+    private dibujarFooterPreventa(doc: jsPDF, datos: DatosTicketPreventa): void {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text('COMPROBANTE DE PREVENTA', this.ANCHO_TICKET / 2, this.posY, { align: 'center' });
+        this.posY += 6;
+        this.dibujarLinea(doc);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(datos.leyenda, this.MARGEN_IZQ, this.posY)
+        this.posY += 6;
+    }
+
     /**
      * Formatea fecha a string
     */
@@ -748,6 +1060,40 @@ class FacturaService {
     private readonly MARGEN_IZQ = 2;
     private posY = 10; // Posición Y inicial
 
+    private imprimirEnIframeOculto(doc: jsPDF): void {
+        const blobUrl = doc.output('bloburl');
+        const iframe = document.createElement('iframe');
+
+        // Estilo para ocultar el iframe del usuario pero mantenerlo visible para la impresión
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+
+        iframe.src = blobUrl;
+
+        iframe.onload = () => {
+            try {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+            } catch (error) {
+                console.error("Error al intentar imprimir desde el iframe oculto:", error);
+            }
+
+            // Remover el iframe y revocar el blob URL después de un pequeño setTimeout de seguridad
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+                URL.revokeObjectURL(blobUrl);
+            }, 5000);
+        };
+
+        document.body.appendChild(iframe);
+    }
+
 
     /**
      * Generar el ticket e imprime automaticamente
@@ -792,9 +1138,9 @@ class FacturaService {
         // Pie de página
         this.dibujarLinea(doc);
 
-        // Abrir el PDF en una nueva ventana para imprimir
+        // Imprimir en segundo plano usando un iframe oculto
         doc.autoPrint();
-        window.open(doc.output('bloburl'), '_blank');
+        this.imprimirEnIframeOculto(doc);
     }
 
 

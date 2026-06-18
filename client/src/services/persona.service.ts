@@ -62,10 +62,13 @@ interface PersonaInfo {
   codigo?: number;
   idGrupoCliente?: number;
   nombreGrupoCliente?: string;
+  porcentajeDescuento?: number;
 
-  // campos de funcionario
-  idFuncionario?: number;
-  idSector?: number;
+  // campos de personal y delivery
+  tipoPersonal?: boolean;
+  idPersonal?: number;
+  tipoDelivery?: boolean;
+  idDelivery?: number;
 }
 
 /**

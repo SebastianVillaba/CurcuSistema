@@ -24,8 +24,8 @@ export interface Persona {
   timbrado?: string;                 
   tipoPersonaFis: boolean;           
   tipoPersonaCli: boolean;           
-  tipoFuncionario: boolean;
-  idSector?: number | null;
+  tipoPersonal?: boolean;
+  tipoDelivery?: boolean;
 }
 
 export interface PersonaFormData extends Persona {}

@@ -12,6 +12,7 @@ import pedidoRoutes from './pedido.routes';
 import pedidoInternoRoutes from './pedidoInterno.routes';
 import deliveryRoutes from './delivery.routes';
 import precobranzaRoutes from './precobranza.routes';
+import preventaRoutes from './preventa.routes';
 import comprasRoutes from './compras.routes';
 import planillasRoutes from './planillas.routes'
 import sectorRoutes from './sector.routes';
@@ -42,6 +43,7 @@ router.use('/terminal', terminalRoutes);
 router.use('/delivery', deliveryRoutes);
 router.use('/denominacion', denominacionRoutes);
 router.use('/precobranza', precobranzaRoutes);
+router.use('/preventa', preventaRoutes);
 router.use('/compras', comprasRoutes);
 router.use('/remisiones', remisionRoutes);
 router.use('/pedido-interno', pedidoInternoRoutes);

@@ -32,6 +32,7 @@ interface ClienteResultado {
   dv: string;
   direccion: string;
   celular: string;
+  porcentajeDescuento?: number;
 }
 
 interface Cliente {
@@ -312,6 +313,7 @@ const SearchClienteModal: React.FC<SearchClienteModalProps> = ({
                   dv: cliente.dv,
                   direccion: cliente.direccion,
                   celular: cliente.celular || '',
+                  porcentajeDescuento: cliente.porcentajeDescuento || 0,
                 });
                 onClose();
               }}

@@ -44,6 +44,9 @@ import GastoModal from '../components/GastoModal';
 import { useTerminal } from '../hooks/useTerminal';
 import SearchClienteModal from '../components/SearchClienteModal';
 import RequirePermission from '../components/RequirePermission';
+import { preventaService } from '../services/preventa.service';
+import RecargarPreventaModal from '../components/RecargarPreventaModal';
+import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
 
 const Facturacion: React.FC = () => {
   // Obtener información de la terminal
@@ -60,17 +63,9 @@ const Facturacion: React.FC = () => {
   // TODO: Obtener idUsuario del contexto de autenticación
   const idUsuario = 1; // Temporal - reemplazar con usuario autenticado
 
-  // Estados para búsqueda
-  const [clientesOptions, setClientesOptions] = useState<Cliente[]>([]);
-  const [productosOptions, setProductosOptions] = useState<ItemFactura[]>([]);
   const [termino, setTermino] = useState('');
   const [openSearchModal, setOpenSearchModal] = useState(false);
   const [cantidadProducto, setCantidadProducto] = useState(1);
-
-  // Dialog para agregar producto
-  const [openProductDialog, setOpenProductDialog] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<ItemFactura | null>(null);
-  const [cantidad, setCantidad] = useState(1);
 
   // Modal de cliente
   const [openClienteModal, setOpenClienteModal] = useState(false);
@@ -82,14 +77,12 @@ const Facturacion: React.FC = () => {
   // Modales de pago y tipo de comprobante
   const [openPagoModal, setOpenPagoModal] = useState(false);
   const [openTipoComprobanteModal, setOpenTipoComprobanteModal] = useState(false);
-
-  // Modal de gastos
-  const [openGastoModal, setOpenGastoModal] = useState(false);
+  const [openRecargarPreventaModal, setOpenRecargarPreventaModal] = useState(false);
 
   // Calcular totales
   const calcularTotales = () => {
-    const subtotal = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
-    const descuentoTotal = items.reduce((sum, item) => sum + (item.descuento || 0), 0);
+    const subtotal = items.reduce((sum, item) => sum + (item.precioUnitario || 0) * item.unidades, 0);
+    const descuentoTotal = items.reduce((sum, item) => sum + (item.descuento || 0) * item.unidades, 0);
     const iva5Total = items.reduce((sum, item) => sum + (item.iva5 || 0), 0);
     const iva10Total = items.reduce((sum, item) => sum + (item.iva10 || 0), 0);
     const ivaTotal = iva5Total + iva10Total;
@@ -231,6 +224,12 @@ const Facturacion: React.FC = () => {
     }
 
     try {
+      // Calcular descuento unitario en el frontend según el cliente seleccionado
+      const pct = cliente?.porcentajeDescuento || 0;
+      const unitPrice = producto.precio;
+      const netPrice = Math.round((unitPrice - (unitPrice * pct)) / 1000) * 1000;
+      const precioDescuento = unitPrice - netPrice;
+
       // Agregar a la BD
       await ventaService.agregarDetalleVenta({
         idTerminalWeb,
@@ -238,8 +237,8 @@ const Facturacion: React.FC = () => {
         idProducto: producto.idProducto,
         idStock: producto.idStock || 1,
         cantidad: cantidadProducto,
-        precioUnitario: producto.precio,
-        precioDescuento: 0
+        precioUnitario: unitPrice,
+        precioDescuento: precioDescuento
       });
 
       // Recargar la lista
@@ -484,7 +483,7 @@ const Facturacion: React.FC = () => {
   };
 
   // Handler para cuando se selecciona un cliente en el modal
-  const handleClienteSelected = (clienteData: any) => {
+  const handleClienteSelected = async (clienteData: any) => {
     // Validar que el cliente tenga un ID válido
     if (!clienteData.idCliente || clienteData.idCliente === 0) {
       setError('El cliente seleccionado no tiene un ID válido');
@@ -497,10 +496,138 @@ const Facturacion: React.FC = () => {
       direccion: clienteData.direccion || '',
       telefono: clienteData.celular || '',
       documento: clienteData.ruc || '',
-      dv: clienteData.dv || ''
+      dv: clienteData.dv || '',
+      porcentajeDescuento: clienteData.porcentajeDescuento || 0
     };
     setCliente(nuevoCliente);
     setSuccess('Cliente seleccionado correctamente');
+
+    // Actualizar descuentos de los items existentes en la base de datos
+    try {
+      await ventaService.actualizarDescuentoCliente(idTerminalWeb, clienteData.idCliente);
+      await cargarDetalleVenta();
+    } catch (error: any) {
+      console.error('Error al aplicar descuento del cliente:', error);
+      setError(error.message || 'Error al aplicar descuento del cliente');
+    }
+  };
+
+  // Guardar como preventa
+  const handlePreventa = async () => {
+    setError('');
+    setSuccess('');
+
+    if (items.length === 0) {
+      setError('Debe agregar al menos un producto');
+      return;
+    }
+
+    if (!cliente || cliente.idCliente === 8 || cliente.nombre === 'SIN NOMBRE' || !cliente.nombre.trim()) {
+      setError('La preventa solo puede realizarse a un cliente con nombre.');
+      return;
+    }
+
+    if (!window.confirm('¿Desea guardar esta venta como PREVENTA?')) {
+      return;
+    }
+
+    try {
+      const { total, descuentoTotal } = calcularTotales();
+      const idUsuario = localStorage.getItem('idUsuario') || '1';
+
+      const preventaData = {
+        idUsuarioAlta: parseInt(idUsuario),
+        idTerminalWeb: idTerminalWeb,
+        idCliente: cliente.idCliente,
+        ruc: cliente.documento || '',
+        nombreCliente: cliente.nombre,
+        totalVenta: total,
+        totalDescuento: descuentoTotal
+      };
+
+      const response = await preventaService.guardarPreventa(preventaData);
+
+      if (response.success && response.idPreventa) {
+        setSuccess('Preventa guardada exitosamente');
+
+        // Generar e imprimir comprobante de preventa
+        try {
+          const datosReporte = await preventaService.obtenerDatosTicketPreventa(response.idPreventa);
+
+          const datosTicketPreventa = {
+            nombreFantasia: datosReporte.cabecera.nombreFantasia,
+            ruc: datosReporte.cabecera.ruc,
+            nombreSucursal: datosReporte.cabecera.nombreSucursal,
+            nombreTipoPago: datosReporte.cabecera.nombreTipoPago,
+
+            fechaHora: new Date(datosReporte.cabecera.fechaHora),
+            idPreventa: response.idPreventa,
+            total: datosReporte.cabecera.total,
+
+            cliente: datosReporte.cabecera.cliente,
+            rucCliente: datosReporte.cabecera.rucCliente,
+
+            vendedor: datosReporte.cabecera.vendedor || 'Sistema',
+            totalLetra: datosReporte.cabecera.totalLetra,
+            leyenda: datosReporte.cabecera.leyenda,
+
+            items: datosReporte.items.map((item: any) => ({
+              cantidad: item.cantidad,
+              codigo: item.codigo,
+              mercaderia: item.mercaderia,
+              precio: item.precio,
+              subtotal: item.subtotal
+            }))
+          };
+
+          await ticketService.generarTicketPreventa(datosTicketPreventa);
+        } catch (reportError) {
+          console.error('Error al generar comprobante de preventa:', reportError);
+          setError('Preventa guardada pero hubo un error al imprimir el ticket.');
+        }
+
+        // Limpiar el formulario
+        handleNuevaFactura();
+      }
+    } catch (error: any) {
+      console.error('Error al guardar preventa:', error);
+      setError(error.response?.data?.message || error.message || 'Error al guardar la preventa');
+    }
+  };
+
+  // Recargar una preventa seleccionada
+  const handlePreventaSelected = async (idPreventa: number) => {
+    setError('');
+    setSuccess('');
+
+    try {
+      const idUsuario = localStorage.getItem('idUsuario') || '1';
+      const response = await preventaService.recargarPreventa(idTerminalWeb, parseInt(idUsuario), idPreventa);
+
+      if (response.success) {
+        setSuccess('Preventa recargada y cargada en el detalle');
+
+        // Cargar los datos del cliente
+        if (response.clienteData) {
+          const clientData = response.clienteData;
+          const nuevoCliente: Cliente = {
+            idCliente: clientData.idCliente,
+            nombre: clientData.nombreCliente,
+            direccion: clientData.direccion || '',
+            telefono: clientData.celular || '',
+            documento: clientData.ruc || '',
+            dv: clientData.dv || ''
+          };
+          setCliente(nuevoCliente);
+        }
+
+        // Recargar los items de la venta
+        await cargarDetalleVenta();
+      }
+    } catch (error: any) {
+      console.error('Error al recargar preventa:', error);
+      setError(error.response?.data?.message || error.message || 'Error al recargar la preventa');
+    }
   };
 
   return (
@@ -510,7 +637,7 @@ const Facturacion: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <Paper sx={{ p: 2, mb: 2, width: '120vh' }}>
             <Grid container spacing={4}>
-              <Grid xs={6}>
+              <Grid xs={5}>
                 <Stack spacing={1}>
                   <div>
                     <TextField
@@ -553,7 +680,7 @@ const Facturacion: React.FC = () => {
                 </Stack>
               </Grid>
 
-              <Grid xs={3}>
+              <Grid xs={4}>
                 <Stack spacing={1}>
                   <TextField
                     fullWidth
@@ -564,16 +691,42 @@ const Facturacion: React.FC = () => {
                     onChange={(e) => setFecha(e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
-                  <div style={{ display: 'flex', gap: '1vh' }}>
+                  <div style={{ display: 'flex', gap: '1vh', flexWrap: 'wrap' }}>
                     <Button
                       variant='contained'
                       sx={{
-                        width: '10vh'
+                        width: '8vh',
+                        minWidth: '50px'
                       }}
                       onClick={() => setOpenClienteModal(true)}
                       title="Buscar/Agregar Cliente (F2)"
                     >
                       <PersonSearchIcon />
+                    </Button>
+                    <Button
+                      variant='contained'
+                      color='warning'
+                      sx={{
+                        width: '12vh',
+                        minWidth: '90px'
+                      }}
+                      onClick={handlePreventa}
+                      disabled={items.length === 0}
+                      title="Guardar como Preventa"
+                    >
+                      Preventa
+                    </Button>
+                    <Button
+                      variant='outlined'
+                      color='secondary'
+                      sx={{
+                        width: '12vh',
+                        minWidth: '90px'
+                      }}
+                      onClick={() => setOpenRecargarPreventaModal(true)}
+                      title="Recargar Preventa"
+                    >
+                      Recargar
                     </Button>
                   </div>
                 </Stack>
@@ -701,11 +854,9 @@ const Facturacion: React.FC = () => {
                     <TableCell>{item.origen === 'N' ? 'Nacional' : 'Importado'}</TableCell>
                     <TableCell align='center'>{item.unidades}</TableCell>
                     <TableCell align="right">₲{(item.precioUnitario || item.precio || 0).toLocaleString()}</TableCell>
+                    <TableCell align="right">₲{((item.precioUnitario || item.precio || 0) * item.unidades).toLocaleString()}</TableCell>
+                    <TableCell align="right">₲{((item.descuento || 0) * item.unidades).toLocaleString()}</TableCell>
                     <TableCell align="right">₲{(item.subtotal || 0).toLocaleString()}</TableCell>
-                    <TableCell align="right">
-                      {item.descuento}
-                    </TableCell>
-                    <TableCell align="right">₲{((item.subtotal || 0) - (item.descuento || 0)).toLocaleString()}</TableCell>
                     <TableCell align="right">
                       <IconButton size="small" color="error" onClick={() => handleEliminarItem(index)}>
                         <DeleteIcon />
@@ -832,6 +983,13 @@ const Facturacion: React.FC = () => {
           onClose={() => setOpenTipoComprobanteModal(false)}
           onSelectTipo={handleGuardarVenta}
         />  
+
+        {/* Modal de recarga de preventa */}
+        <RecargarPreventaModal
+          open={openRecargarPreventaModal}
+          onClose={() => setOpenRecargarPreventaModal(false)}
+          onPreventaSelected={handlePreventaSelected}
+        />
       </Box>
     </RequirePermission>
   );

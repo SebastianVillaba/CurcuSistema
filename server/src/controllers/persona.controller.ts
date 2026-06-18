@@ -50,8 +50,8 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       timbrado,
       tipoPersonaFis,
       tipoPersonaCli,
-      tipoFuncionario,
-      idSector
+      tipoPersonal,
+      tipoDelivery
     } = req.body as InsertarPersonaRequest;
 
     // PASO 2: Validar campos obligatorios
@@ -93,14 +93,6 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    if (tipoFuncionario && !idSector) {
-      res.status(400).json({
-        success: false,
-        message: "Los Funcionarios requieren 'sector'"
-      });
-      return;
-    }
-
     // PASO 5: Preparar los parámetros para el stored procedure
     const inputs = [
       { name: 'nombre', type: sql.VarChar, value: nombre },
@@ -125,8 +117,8 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       { name: 'timbrado', type: sql.VarChar, value: timbrado || '' },
       { name: 'tipoPersonaFis', type: sql.Bit, value: tipoPersonaFis ? 1 : 0 },
       { name: 'tipoPersonaCli', type: sql.Bit, value: tipoPersonaCli ? 1 : 0 },
-      { name: 'tipoFuncionario', type: sql.Bit, value: tipoFuncionario ? 1 : 0 },
-      { name: 'idSector', type: sql.Int, value: idSector || 0 }
+      { name: 'tipoPersonal', type: sql.Bit, value: tipoPersonal ? 1 : 0 },
+      { name: 'tipoDelivery', type: sql.Bit, value: tipoDelivery ? 1 : 0 }
     ];
 
     // PASO 6: Ejecutar el stored procedure
@@ -476,7 +468,14 @@ export const modificarPersona = async (req: Request, res: Response): Promise<voi
       apellido,
       responsableProveedor,
       timbrado,
-      idSector
+      tipoPersonal,
+      tipoPersonaJur,
+      tipoProveedor,
+      tipoPersonaFis,
+      tipoPersonaCli,
+      codigo,
+      idGrupoCliente,
+      tipoDelivery
     } = req.body as ModificarPersonaRequest;
 
     // Validar campos obligatorios CRÍTICOS
@@ -507,7 +506,14 @@ export const modificarPersona = async (req: Request, res: Response): Promise<voi
       { name: 'apellido', type: sql.VarChar(40), value: apellido || null },
       { name: 'responsableProveedor', type: sql.VarChar(30), value: responsableProveedor || null },
       { name: 'timbrado', type: sql.VarChar(20), value: timbrado || null },
-      { name: 'idSector', type: sql.Int, value: idSector || null }
+      { name: 'tipoPersonal', type: sql.Bit, value: tipoPersonal ? 1 : 0 },
+      { name: 'tipoPersonaJur', type: sql.Bit, value: tipoPersonaJur ? 1 : 0 },
+      { name: 'tipoProveedor', type: sql.Bit, value: tipoProveedor ? 1 : 0 },
+      { name: 'tipoPersonaFis', type: sql.Bit, value: tipoPersonaFis ? 1 : 0 },
+      { name: 'tipoPersonaCli', type: sql.Bit, value: tipoPersonaCli ? 1 : 0 },
+      { name: 'codigo', type: sql.Int, value: codigo !== undefined ? codigo : null },
+      { name: 'idGrupoCliente', type: sql.Int, value: idGrupoCliente !== undefined ? idGrupoCliente : null },
+      { name: 'tipoDelivery', type: sql.Int, value: tipoDelivery ? 1 : 0 }
     ];
 
     const result = await executeRequest({
@@ -532,11 +538,6 @@ export const modificarPersona = async (req: Request, res: Response): Promise<voi
       res.status(400).json({
         success: false,
         message: error.message || "El RUC ingresado ya pertenece a otra persona."
-      });
-    } else if (error.number === 50005) {
-      res.status(400).json({
-        success: false,
-        message: error.message || "El Sector seleccionado no existe."
       });
     } else {
       res.status(500).json({

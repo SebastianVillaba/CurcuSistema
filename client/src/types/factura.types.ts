@@ -5,6 +5,7 @@ export interface Cliente {
   telefono?: string;
   documento?: string;
   dv?: string;
+  porcentajeDescuento?: number;
 }
 
 export interface Conductor {

@@ -285,3 +285,44 @@ export const consultaFacturaCorrelativa = async (req: Request, res: Response): P
   }
 }
 
+/**
+ * Controller para actualizar el descuento de todos los items en la terminal temporal según el cliente seleccionado.
+ */
+export const actualizarDescuentoCliente = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { idTerminalWeb, idCliente } = req.body;
+
+    if (!idTerminalWeb) {
+      res.status(400).json({
+        success: false,
+        message: "El parámetro 'idTerminalWeb' es obligatorio"
+      });
+      return;
+    }
+
+    const inputs = [
+      { name: 'idTerminalWeb', type: sql.Int, value: parseInt(idTerminalWeb) },
+      { name: 'idCliente', type: sql.Int, value: idCliente ? parseInt(idCliente) : null }
+    ];
+
+    await executeRequest({
+      query: 'sp_updDetVentaTmp',
+      inputs: inputs as any,
+      isStoredProcedure: true
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Descuentos actualizados correctamente.'
+    });
+
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error al actualizar descuentos",
+      error: error.message
+    });
+  }
+};
+
+

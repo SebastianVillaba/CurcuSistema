@@ -349,7 +349,8 @@ export const agregarClienteRapido = async (req: Request, res: Response): Promise
       email,
       idCiudad,
       idUsuarioAlta,
-      idTipoDocumento
+      idTipoDocumento,
+      idGrupoCliente
     } = req.body;
 
     // Validar parámetros obligatorios
@@ -375,7 +376,8 @@ export const agregarClienteRapido = async (req: Request, res: Response): Promise
         { name: 'email', type: sql.VarChar(50), value: email || null },
         { name: 'idCiudad', type: sql.Int, value: idCiudad },
         { name: 'idUsuarioAlta', type: sql.Int, value: idUsuarioAlta },
-        { name: 'idTipoDocumento', type: sql.Int, value: idTipoDocumento }
+        { name: 'idTipoDocumento', type: sql.Int, value: idTipoDocumento },
+        { name: 'idGrupoCliente', type: sql.Int, value: idGrupoCliente || 1 }
       ]
     });
 
@@ -548,3 +550,29 @@ export const modificarPersona = async (req: Request, res: Response): Promise<voi
     }
   }
 };
+
+/**
+ * Controller para obtener todos los grupos de clientes activos.
+ */
+export const obtenerGruposCliente = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await executeRequest({
+      query: 'SELECT idGrupoCliente, nombreGrupoCliente FROM grupoCliente WHERE activo = 1 ORDER BY nombreGrupoCliente',
+      isStoredProcedure: false
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Grupos de clientes obtenidos exitosamente",
+      result: result.recordset
+    });
+  } catch (error: any) {
+    console.error("Error en obtenerGruposCliente:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener grupos de clientes",
+      error: error.message
+    });
+  }
+};
+

@@ -347,6 +347,7 @@ const Pedidos: React.FC = () => {
         celular: reporte.cabecera.celular || '',
         fechaHora: reporte.cabecera.fechaHora || new Date().toISOString(),
         delivery: reporte.cabecera.nombreDelivery || '',
+        observacion: reporte.cabecera.observacion || '',
         items,
         total: items.reduce((sum: number, item) => sum + item.subtotal, 0)
       };

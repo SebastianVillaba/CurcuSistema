@@ -34,3 +34,9 @@ export interface PersonaSearchParams {
   searchTerm?: string;
   searchBy?: 'nombre' | 'codigo' | 'ruc';
 }
+
+export interface GrupoCliente {
+  idGrupoCliente: number;
+  nombreGrupoCliente: string;
+}
+

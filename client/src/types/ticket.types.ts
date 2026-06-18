@@ -99,6 +99,7 @@ export interface DatosTicketPedido {
   celular: string;
   fechaHora: Date;
   delivery: string;
+  observacion?: string;
   items: ItemTicketPedido[];
   total: number;
 }

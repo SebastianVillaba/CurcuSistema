@@ -263,6 +263,12 @@ class TicketService {
         altura += 4; // Celular
         altura += 4; // Fecha
         altura += 6; // Delivery
+        if (datos.observacion) {
+            const observacionLineas = this.dividirTexto(datos.observacion, 22);
+            altura += 4; // Título "Obs:"
+            altura += observacionLineas.length * 4;
+            altura += 2;
+        }
         altura += 5; // Línea separadora
 
         // Encabezado tabla + línea
@@ -323,6 +329,17 @@ class TicketService {
         doc.setFontSize(9);
         doc.text(`Delivery: ${datos.delivery || ''}`, this.MARGEN_IZQ, this.posY);
         this.posY += 6;
+        if (datos.observacion) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Obs:', this.MARGEN_IZQ, this.posY);
+            doc.setFont('helvetica', 'normal');
+            const obsLineas = this.dividirTexto(datos.observacion, 22);
+            obsLineas.forEach((linea) => {
+                this.posY += 4;
+                doc.text(linea, this.MARGEN_IZQ, this.posY);
+            });
+            this.posY += 6;
+        }
         this.dibujarLinea(doc);
     }
 

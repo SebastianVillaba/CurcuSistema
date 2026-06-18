@@ -21,6 +21,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import { personaService } from '../services/persona.service';
 import { ubicacionService } from '../services/ubicacion.service';
 import type { Departamento, Distrito, Ciudad } from '../types/ubicacion.types';
+import type { GrupoCliente } from '../types/persona.types';
 
 interface ClienteData {
   idPersona?: number;
@@ -37,6 +38,7 @@ interface ClienteData {
   email?: string;
   fechaNacimiento?: string;
   porcentajeDescuento?: number;
+  idGrupoCliente?: number;
 }
 
 interface ClienteFormProps {
@@ -69,6 +71,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [porcentajeDescuento, setPorcentajeDescuento] = useState<number>(0);
+  const [gruposCliente, setGruposCliente] = useState<GrupoCliente[]>([]);
+  const [idGrupoCliente, setIdGrupoCliente] = useState<number>(1);
 
   // TODO: Obtener idUsuario del contexto de autenticación
   const idUsuario = 1; // Temporal
@@ -81,12 +85,23 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
   const [idDistrito, setIdDistrito] = useState<number | undefined>();
   const [idCiudad, setIdCiudad] = useState<string | undefined>();
 
-  // Cargar departamentos al abrir el modal
+  // Cargar departamentos y grupos al abrir el modal
   useEffect(() => {
     if (open) {
       cargarDepartamentos();
+      cargarGrupos();
     }
   }, [open]);
+
+  const cargarGrupos = async () => {
+    try {
+      const data = await personaService.obtenerGruposCliente();
+      setGruposCliente(data);
+    } catch (error) {
+      console.error('Error al cargar grupos de clientes:', error);
+    }
+  };
+
 
   // Cargar distritos cuando cambia el departamento
   useEffect(() => {
@@ -283,7 +298,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         email: email || undefined,
         idCiudad: parseInt(idCiudad),
         idUsuarioAlta: idUsuario,
-        idTipoDocumento: tipoDocumento
+        idTipoDocumento: tipoDocumento,
+        idGrupoCliente: idGrupoCliente
       });
 
       // Seleccionar el cliente recién creado
@@ -330,6 +346,7 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     setFechaNacimiento('');
     setError('');
     setPorcentajeDescuento(0);
+    setIdGrupoCliente(1);
     onClose();
   };
 
@@ -388,6 +405,21 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
                 {tiposDocumento.map((tipo) => (
                   <MenuItem key={tipo.id} value={tipo.id}>
                     {tipo.nombre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel id="grupo-cliente-label">Grupo Cliente</InputLabel>
+              <Select
+                labelId="grupo-cliente-label"
+                value={idGrupoCliente}
+                onChange={(e) => setIdGrupoCliente(Number(e.target.value))}
+                label="Grupo Cliente"
+              >
+                {gruposCliente.map((grupo) => (
+                  <MenuItem key={grupo.idGrupoCliente} value={grupo.idGrupoCliente}>
+                    {grupo.nombreGrupoCliente}
                   </MenuItem>
                 ))}
               </Select>

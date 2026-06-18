@@ -11,10 +11,11 @@ import {
   Autocomplete,
 } from '@mui/material';
 import TextField from '../UppercaseTextField';
-import type { Persona } from '../../types/persona.types';
+import type { Persona, GrupoCliente } from '../../types/persona.types';
 import type { Departamento, Distrito, Ciudad } from '../../types/ubicacion.types';
 import { TipoPersonaForm } from './TipoPersonaForm';
 import { ubicacionService } from '../../services/ubicacion.service';
+import { personaService } from '../../services/persona.service';
 
 interface PersonaFormProps {
   formData: Persona;
@@ -45,6 +46,20 @@ export default function PersonaForm({ formData, setFormData }: PersonaFormProps)
   const [ciudades, setCiudades] = useState<Ciudad[]>([]);
   const [loading, setLoading] = useState(false);
   const [valoresPorDefectoCargados, setValoresPorDefectoCargados] = useState(false);
+  const [gruposCliente, setGruposCliente] = useState<GrupoCliente[]>([]);
+
+  // Cargar grupos de cliente al montar
+  useEffect(() => {
+    const cargarGrupos = async () => {
+      try {
+        const data = await personaService.obtenerGruposCliente();
+        setGruposCliente(data);
+      } catch (error) {
+        console.error('Error al cargar grupos de clientes:', error);
+      }
+    };
+    cargarGrupos();
+  }, []);
 
   // Cargar departamentos al montar el componente
   useEffect(() => {
@@ -230,6 +245,28 @@ export default function PersonaForm({ formData, setFormData }: PersonaFormProps)
               ))}
             </Select>
           </FormControl>
+          {formData.tipoPersonaCli && (
+            <FormControl fullWidth size="small">
+              <InputLabel id="grupo-cliente-label">Grupo Cliente</InputLabel>
+              <Select
+                labelId="grupo-cliente-label"
+                value={formData.idGrupoCliente || 1}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    idGrupoCliente: Number(e.target.value)
+                  }));
+                }}
+                label="Grupo Cliente"
+              >
+                {gruposCliente.map((grupo) => (
+                  <MenuItem key={grupo.idGrupoCliente} value={grupo.idGrupoCliente}>
+                    {grupo.nombreGrupoCliente}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </Stack>
 
         {/* Fila 4: Departamento */}

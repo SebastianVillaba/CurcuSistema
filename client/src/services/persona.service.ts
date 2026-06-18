@@ -1,5 +1,6 @@
 import axios from 'axios';
-import type { Persona } from '../types/persona.types';
+import type { Persona, GrupoCliente } from '../types/persona.types';
+
 
 // URL base del API - ajusta según tu configuración
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -230,6 +231,18 @@ export const personaService = {
     } catch (error: any) {
       console.error('Error al agregar cliente rápidamente:', error);
       throw new Error(error.response?.data?.message || 'Error al agregar cliente');
+    }
+  },
+
+  obtenerGruposCliente: async (): Promise<GrupoCliente[]> => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/persona/gruposCliente`
+      );
+      return response.data.result;
+    } catch (error: any) {
+      console.error('Error al obtener grupos de cliente:', error);
+      throw new Error(error.response?.data?.message || 'Error al obtener grupos de cliente');
     }
   }
 };

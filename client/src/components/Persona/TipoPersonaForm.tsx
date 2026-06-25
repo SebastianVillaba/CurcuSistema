@@ -10,8 +10,10 @@ import {
     FormControl,
     InputLabel,
     Select,
-    MenuItem
+    MenuItem,
+    TextField as MuiTextField
 } from '@mui/material';
+import MapaCliente from '../MapaCliente';
 import TextField from '../UppercaseTextField';
 import { useState, useEffect } from 'react';
 import type { Persona, GrupoCliente } from '../../types/persona.types';
@@ -38,6 +40,41 @@ interface TipoPersonaFormProps {
 export const TipoPersonaForm = ({ formData, setFormData }: TipoPersonaFormProps) => {
     const [activeTab, setActiveTab] = useState<number>(0);
     const [gruposCliente, setGruposCliente] = useState<GrupoCliente[]>([]);
+    const [googleMapsUrl, setGoogleMapsUrl] = useState('');
+
+    useEffect(() => {
+        if (formData.latitud !== undefined && formData.longitud !== undefined && formData.latitud !== null && formData.longitud !== null) {
+            setGoogleMapsUrl(`https://www.google.com/maps?q=${formData.latitud},${formData.longitud}`);
+        } else {
+            setGoogleMapsUrl('');
+        }
+    }, [formData.idPersona]);
+
+    const parseGoogleMapsUrl = (url: string) => {
+        if (!url) return;
+        
+        const regexAt = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const regexQ = /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const regexPlace = /\/place\/(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const regexQuery = /[?&]query=(-?\d+\.\d+),(-?\d+\.\d+)/;
+
+        let match = url.match(regexAt);
+        if (!match) match = url.match(regexQ);
+        if (!match) match = url.match(regexPlace);
+        if (!match) match = url.match(regexQuery);
+
+        if (match && match.length >= 3) {
+            const lat = parseFloat(match[1]);
+            const lng = parseFloat(match[2]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                setFormData(prev => ({
+                    ...prev,
+                    latitud: lat,
+                    longitud: lng
+                }));
+            }
+        }
+    };
 
     useEffect(() => {
         const fetchGrupos = async () => {
@@ -310,6 +347,54 @@ export const TipoPersonaForm = ({ formData, setFormData }: TipoPersonaFormProps)
                                         </Select>
                                     </FormControl>
                                 </Stack>
+
+                                {/* Geolocalización de Entrega */}
+                                <Box sx={{ mt: 2, p: 2, border: '1px dashed #bbb', borderRadius: '8px', bgcolor: 'background.paper' }}>
+                                    <Typography variant="subtitle2" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>
+                                        Ubicación de Entrega (Geolocalización)
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                                        <MuiTextField
+                                            fullWidth
+                                            label="Pegar Enlace de Google Maps"
+                                            placeholder="Ej: https://www.google.com/maps?q=-27.34,-55.86"
+                                            value={googleMapsUrl}
+                                            onChange={(e) => {
+                                                setGoogleMapsUrl(e.target.value);
+                                                parseGoogleMapsUrl(e.target.value);
+                                            }}
+                                            size="small"
+                                        />
+                                    </Stack>
+                                    <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                                        <MuiTextField
+                                            fullWidth
+                                            label="Latitud"
+                                            value={formData.latitud !== undefined && formData.latitud !== null ? formData.latitud.toString() : ''}
+                                            size="small"
+                                            disabled
+                                        />
+                                        <MuiTextField
+                                            fullWidth
+                                            label="Longitud"
+                                            value={formData.longitud !== undefined && formData.longitud !== null ? formData.longitud.toString() : ''}
+                                            size="small"
+                                            disabled
+                                        />
+                                    </Stack>
+                                    <MapaCliente
+                                        latitud={formData.latitud}
+                                        longitud={formData.longitud}
+                                        onChange={(lat, lng) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                latitud: lat,
+                                                longitud: lng
+                                            }));
+                                            setGoogleMapsUrl(`https://www.google.com/maps?q=${lat},${lng}`);
+                                        }}
+                                    />
+                                </Box>
                             </Stack>
                         )}
                     </Stack>

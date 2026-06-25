@@ -23,6 +23,8 @@ export interface InsertarPersonaRequest {
   tipoPersonaCli: boolean;
   tipoPersonal?: boolean;
   tipoDelivery?: boolean;
+  latitud?: number;
+  longitud?: number;
 }
 
 export interface InsertarPersonaResponse {
@@ -71,6 +73,8 @@ export interface PersonaInfoCompleta {
   codigo?: number;
   idGrupoCliente?: number;
   nombreGrupoCliente?: string;
+  latitud?: number;
+  longitud?: number;
 }
 
 export interface ModificarPersonaRequest {
@@ -100,4 +104,6 @@ export interface ModificarPersonaRequest {
   codigo?: number;
   idGrupoCliente?: number;
   tipoDelivery?: boolean;
+  latitud?: number;
+  longitud?: number;
 }

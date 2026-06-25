@@ -14,12 +14,15 @@ import {
   Select,
   MenuItem,
   Autocomplete,
+  Typography,
 } from '@mui/material';
 import TextField from '../components/UppercaseTextField';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { personaService } from '../services/persona.service';
 import { ubicacionService } from '../services/ubicacion.service';
+import { distribucionService } from '../services/distribucion.service';
+import MapaCliente from './MapaCliente';
 import type { Departamento, Distrito, Ciudad } from '../types/ubicacion.types';
 import type { GrupoCliente } from '../types/persona.types';
 
@@ -39,6 +42,8 @@ interface ClienteData {
   fechaNacimiento?: string;
   porcentajeDescuento?: number;
   idGrupoCliente?: number;
+  latitud?: number;
+  longitud?: number;
 }
 
 interface ClienteFormProps {
@@ -73,6 +78,11 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
   const [porcentajeDescuento, setPorcentajeDescuento] = useState<number>(0);
   const [gruposCliente, setGruposCliente] = useState<GrupoCliente[]>([]);
   const [idGrupoCliente, setIdGrupoCliente] = useState<number>(1);
+
+  // Estados para Geolocalización
+  const [latitud, setLatitud] = useState<number | undefined>();
+  const [longitud, setLongitud] = useState<number | undefined>();
+  const [googleMapsUrl, setGoogleMapsUrl] = useState('');
 
   // TODO: Obtener idUsuario del contexto de autenticación
   const idUsuario = 1; // Temporal
@@ -167,6 +177,31 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     }
   };
 
+  const parseGoogleMapsUrl = (url: string) => {
+    if (!url) return;
+    
+    // Expresiones regulares para extraer coordenadas de URLs de Google Maps
+    const regexAt = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+    const regexQ = /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/;
+    const regexPlace = /\/place\/(-?\d+\.\d+),(-?\d+\.\d+)/;
+    const regexQuery = /[?&]query=(-?\d+\.\d+),(-?\d+\.\d+)/;
+
+    let match = url.match(regexAt);
+    if (!match) match = url.match(regexQ);
+    if (!match) match = url.match(regexPlace);
+    if (!match) match = url.match(regexQuery);
+
+    if (match && match.length >= 3) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setLatitud(lat);
+        setLongitud(lng);
+        setError('');
+      }
+    }
+  };
+
   const handleRucKeyPress = async (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && ruc.trim()) {
       await buscarClientePorRuc();
@@ -202,6 +237,15 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         setCelular(cliente.celular || '');
         setEmail(cliente.email || '');
 
+        // Geolocalización
+        if (cliente.latitud) setLatitud(Number(cliente.latitud));
+        if (cliente.longitud) setLongitud(Number(cliente.longitud));
+        if (cliente.latitud && cliente.longitud) {
+          setGoogleMapsUrl(`https://www.google.com/maps?q=${cliente.latitud},${cliente.longitud}`);
+        } else {
+          setGoogleMapsUrl('');
+        }
+
         // Establecer ubicación
         if (cliente.idDepartamento) setIdDepartamento(cliente.idDepartamento);
         if (cliente.idDistrito) setIdDistrito(cliente.idDistrito);
@@ -228,6 +272,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
           email: cliente.email,
           fechaNacimiento: cliente.fechaNacimiento,
           porcentajeDescuento: cliente.porcentajeDescuento || 0,
+          latitud: cliente.latitud ? Number(cliente.latitud) : undefined,
+          longitud: cliente.longitud ? Number(cliente.longitud) : undefined,
         };
 
         onClienteSelected(clienteData);
@@ -235,6 +281,9 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
       } else {
         // No se encontró, permitir agregar nuevo cliente
         setClienteEncontrado(false);
+        setLatitud(undefined);
+        setLongitud(undefined);
+        setGoogleMapsUrl('');
         setError('Cliente no encontrado. Complete los datos para agregarlo.');
       }
     } catch (err: any) {
@@ -258,8 +307,16 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
       return;
     }
 
-    // Si el cliente ya fue encontrado, solo seleccionarlo
+    // Si el cliente ya fue encontrado, guardar geolocalización si cambió y seleccionarlo
     if (clienteEncontrado && idPersona) {
+      if (latitud && longitud) {
+        try {
+          await distribucionService.actualizarGeolocalizacion(idPersona, latitud, longitud);
+        } catch (err) {
+          console.error('Error al guardar geolocalización de cliente existente:', err);
+        }
+      }
+
       const clienteData: ClienteData = {
         idPersona,
         'ruc': ruc || '',
@@ -275,6 +332,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         email,
         fechaNacimiento,
         porcentajeDescuento: porcentajeDescuento || 0,
+        latitud,
+        longitud,
       };
 
       onClienteSelected(clienteData);
@@ -302,6 +361,15 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         idGrupoCliente: idGrupoCliente
       });
 
+      // Si se definió geolocalización, guardarla
+      if (latitud && longitud) {
+        try {
+          await distribucionService.actualizarGeolocalizacion(nuevoCliente.idCliente || nuevoCliente.idPersona, latitud, longitud);
+        } catch (geoErr) {
+          console.error('Error al guardar geolocalización:', geoErr);
+        }
+      }
+
       // Seleccionar el cliente recién creado
       const clienteData: ClienteData = {
         idPersona: nuevoCliente.idCliente,
@@ -318,6 +386,8 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
         email,
         fechaNacimiento,
         porcentajeDescuento: nuevoCliente.porcentajeDescuento || 0,
+        latitud,
+        longitud,
       };
 
       onClienteSelected(clienteData);
@@ -347,6 +417,9 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
     setError('');
     setPorcentajeDescuento(0);
     setIdGrupoCliente(1);
+    setLatitud(undefined);
+    setLongitud(undefined);
+    setGoogleMapsUrl('');
     onClose();
   };
 
@@ -526,6 +599,51 @@ const ClienteForm: React.FC<ClienteFormProps> = ({ open, onClose, onClienteSelec
             disabled={!idDistrito}
             renderInput={(params) => <TextField {...params} label="Ciudad" />}
           />
+
+          {/* Geolocalización de Entrega */}
+          <Box sx={{ mt: 1, p: 2, border: '1px dashed #bbb', borderRadius: '8px', bgcolor: 'background.paper' }}>
+            <Typography variant="subtitle2" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>
+              Ubicación de Entrega (Geolocalización)
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+              <TextField
+                fullWidth
+                label="Pegar Enlace de Google Maps"
+                placeholder="Ej: https://www.google.com/maps?q=-27.34,-55.86"
+                value={googleMapsUrl}
+                onChange={(e) => {
+                  setGoogleMapsUrl(e.target.value);
+                  parseGoogleMapsUrl(e.target.value);
+                }}
+                size="small"
+              />
+            </Stack>
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+              <TextField
+                fullWidth
+                label="Latitud"
+                value={latitud !== undefined ? latitud.toString() : ''}
+                size="small"
+                disabled
+              />
+              <TextField
+                fullWidth
+                label="Longitud"
+                value={longitud !== undefined ? longitud.toString() : ''}
+                size="small"
+                disabled
+              />
+            </Stack>
+            <MapaCliente
+              latitud={latitud}
+              longitud={longitud}
+              onChange={(lat, lng) => {
+                setLatitud(lat);
+                setLongitud(lng);
+                setGoogleMapsUrl(`https://www.google.com/maps?q=${lat},${lng}`);
+              }}
+            />
+          </Box>
         </Stack>
       </DialogContent>
       <DialogActions>

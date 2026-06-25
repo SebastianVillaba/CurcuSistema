@@ -51,7 +51,9 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       tipoPersonaFis,
       tipoPersonaCli,
       tipoPersonal,
-      tipoDelivery
+      tipoDelivery,
+      latitud,
+      longitud
     } = req.body as InsertarPersonaRequest;
 
     // PASO 2: Validar campos obligatorios
@@ -118,7 +120,9 @@ export const insertarPersona = async (req: Request, res: Response): Promise<void
       { name: 'tipoPersonaFis', type: sql.Bit, value: tipoPersonaFis ? 1 : 0 },
       { name: 'tipoPersonaCli', type: sql.Bit, value: tipoPersonaCli ? 1 : 0 },
       { name: 'tipoPersonal', type: sql.Bit, value: tipoPersonal ? 1 : 0 },
-      { name: 'tipoDelivery', type: sql.Bit, value: tipoDelivery ? 1 : 0 }
+      { name: 'tipoDelivery', type: sql.Bit, value: tipoDelivery ? 1 : 0 },
+      { name: 'latitud', type: sql.Decimal(9, 6), value: latitud !== undefined && latitud !== null ? latitud : null },
+      { name: 'longitud', type: sql.Decimal(9, 6), value: longitud !== undefined && longitud !== null ? longitud : null }
     ];
 
     // PASO 6: Ejecutar el stored procedure
@@ -477,7 +481,9 @@ export const modificarPersona = async (req: Request, res: Response): Promise<voi
       tipoPersonaCli,
       codigo,
       idGrupoCliente,
-      tipoDelivery
+      tipoDelivery,
+      latitud,
+      longitud
     } = req.body as ModificarPersonaRequest;
 
     // Validar campos obligatorios CRÍTICOS
@@ -515,7 +521,9 @@ export const modificarPersona = async (req: Request, res: Response): Promise<voi
       { name: 'tipoPersonaCli', type: sql.Bit, value: tipoPersonaCli ? 1 : 0 },
       { name: 'codigo', type: sql.Int, value: codigo !== undefined ? codigo : null },
       { name: 'idGrupoCliente', type: sql.Int, value: idGrupoCliente !== undefined ? idGrupoCliente : null },
-      { name: 'tipoDelivery', type: sql.Int, value: tipoDelivery ? 1 : 0 }
+      { name: 'tipoDelivery', type: sql.Int, value: tipoDelivery ? 1 : 0 },
+      { name: 'latitud', type: sql.Decimal(9, 6), value: latitud !== undefined && latitud !== null ? latitud : null },
+      { name: 'longitud', type: sql.Decimal(9, 6), value: longitud !== undefined && longitud !== null ? longitud : null }
     ];
 
     const result = await executeRequest({

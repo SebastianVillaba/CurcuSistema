@@ -8,6 +8,7 @@
     "dev:prod": "cross-env NODE_ENV=production tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "cross-env NODE_ENV=production node dist/index.js",
+    "migrate": "tsx src/database/migrar.ts",
     "test": "echo \"No tests yet\" && exit 0"
   },
   "keywords": [],

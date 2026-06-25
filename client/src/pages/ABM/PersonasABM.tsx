@@ -103,6 +103,8 @@ export default function PersonasABM(): JSX.Element {
         timbrado: infoCompleta.timbrado || '',
         codigo: infoCompleta.codigo,
         idGrupoCliente: infoCompleta.idGrupoCliente,
+        latitud: infoCompleta.latitud,
+        longitud: infoCompleta.longitud,
         tipoPersonaJur: !!infoCompleta.nombreFantasia, // Si tiene nombreFantasia es Jurídica
         tipoProveedor: !!infoCompleta.responsable, // Si tiene responsable es Proveedor
         tipoPersonaFis: !!infoCompleta.apellido, // Si tiene apellido es Física

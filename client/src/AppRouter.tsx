@@ -29,6 +29,9 @@ import StockInicial from './pages/Mercaderia/StockInicial';
 import ArqueoCaja from './pages/Caja/ArqueoCaja';
 import ConsultaVentas from './pages/Consultas/ConsultaVentas';
 import Reportes from './pages/Reportes/Reportes';
+import ZonasEntrega from './pages/Distribucion/ZonasEntrega';
+import DespachoPedidos from './pages/Distribucion/DespachoPedidos';
+import HojasRutaList from './pages/Distribucion/HojasRutaList';
 
 // Placeholder components for sub-routes
 const ClientesABM = () => <Container><h3>Submenú Clientes (ABM)</h3></Container>;
@@ -64,6 +67,11 @@ const AppRouter: React.FC = () => {
         </Route>
         <Route path="facturacion" element={<Facturacion />} />
         <Route path="pedidos" element={<Pedidos />} />
+        <Route path="distribucion">
+          <Route path="zonas" element={<ZonasEntrega />} />
+          <Route path="despacho" element={<DespachoPedidos />} />
+          <Route path="hojas-ruta" element={<HojasRutaList />} />
+        </Route>
         <Route path="cobranzas">
           <Route path="precobranza" element={<Precobranza />} />
           <Route path="cobranza" element={<Cobranza />} />

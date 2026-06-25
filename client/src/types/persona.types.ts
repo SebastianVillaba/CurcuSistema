@@ -26,6 +26,8 @@ export interface Persona {
   tipoPersonaCli: boolean;           
   tipoPersonal?: boolean;
   tipoDelivery?: boolean;
+  latitud?: number;
+  longitud?: number;
 }
 
 export interface PersonaFormData extends Persona {}

@@ -36,6 +36,7 @@ import { LocalHospital, PointOfSale } from '@mui/icons-material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HistoryIcon from '@mui/icons-material/History';
 import ListSubheader from '@mui/material/ListSubheader';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 
 const drawerWidth = 240;
 
@@ -184,6 +185,15 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
           text: 'Pedidos',
           path: '/pedidos',
           icon: <ReceiptLongIcon />,
+        },
+        {
+          text: 'Distribución',
+          icon: <LocalShippingIcon />,
+          subItems: [
+            { text: 'Zonas de Entrega', path: '/distribucion/zonas', icon: <InventoryIcon /> },
+            { text: 'Despacho de Pedidos', path: '/distribucion/despacho', icon: <ReceiptLongIcon /> },
+            { text: 'Listado Hojas Ruta', path: '/distribucion/hojas-ruta', icon: <ReceiptIcon /> },
+          ],
         },
         {
           text: 'Arqueo de Caja',
